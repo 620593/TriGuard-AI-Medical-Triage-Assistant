@@ -1,0 +1,17 @@
+# TriGuard AI — Medical Triage Assistant v2
+# ──────────────────────────────────────────
+# Install with: pip install -r requirements.txt
+# Or with uv:   uv pip install -r requirements.txt
+
+# LangGraph pipeline + LangChain core components
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# Groq Python client (LLaMA API)
+groq>=0.10.0
+
+# Tavily web search client (medical grounding)
+tavily-python>=0.3.0
+
+# Environment variable loading from .env
+python-dotenv>=1.0.0

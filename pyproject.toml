@@ -1,13 +1,9 @@
+[tool.uv]
+workspace = { members = ["backend"] }
+
 [project]
-name = "trigaurd-ai-voice-enabled-intelligent-health-risk-assistant"
-version = "2.0.0"
-description = "LangGraph medical triage backend with Groq LLaMA reasoning (v2)"
-readme = "README.md"
+name = "trigaurd-ai-monorepo"
+version = "3.0.0"
+description = "TriGuard AI Monorepo root"
 requires-python = ">=3.11"
-dependencies = [
-    "langchain-core>=0.3.0",
-    "langgraph>=0.2.0",
-    "groq>=0.10.0",
-    "tavily-python>=0.3.0",
-    "python-dotenv>=1.0.0",
-]
+dependencies = []

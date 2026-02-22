@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --color-medical-primary: #0d9488;
+  --color-medical-secondary: #0ea5e9;
+  --color-medical-bg: #f8fafc;
+  --color-risk-low: #22c55e;
+  --color-risk-medium: #eab308;
+  --color-risk-high: #ef4444;
+}
+
+:root {
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  background-color: var(--color-medical-bg);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-content: center;
+  min-width: 320px;
+  min-height: 100vh;
+  @apply bg-slate-50 dark:bg-slate-950;
+}
+
+/* Glassmorphism Classes */
+.glass {
+  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-lg border border-white/20 dark:border-slate-800/20 shadow-xl;
+}
+
+.glass-card {
+  @apply glass rounded-3xl p-6 transition-all duration-300 hover:shadow-2xl hover:scale-[1.01];
+}
+
+/* Animations */
+@keyframes pulse-wave {
+  0% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1.5);
+  }
+  100% {
+    transform: scaleY(0.5);
+  }
+}
+
+.wave-bar {
+  display: inline-block;
+  width: 3px;
+  height: 20px;
+  background: var(--color-medical-primary);
+  margin: 0 1px;
+  border-radius: 2px;
+  animation: pulse-wave 1s infinite ease-in-out;
+}

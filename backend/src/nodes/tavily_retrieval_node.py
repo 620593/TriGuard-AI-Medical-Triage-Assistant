@@ -12,10 +12,12 @@ from backend.src.tools.tavily_tool import search_medical_info
 from backend.src.state.state import TriageState
 from backend.src.logging.logger import get_logger, log_event, LatencyTracker
 
+import asyncio
+
 logger = get_logger("tavily_retrieval")
 
 
-def tavily_retrieval_node(state: TriageState) -> TriageState:
+async def tavily_retrieval_node(state: TriageState) -> TriageState:
     """
     Retrieves up to 3 medical summaries from Tavily using current symptoms.
 
@@ -28,7 +30,7 @@ def tavily_retrieval_node(state: TriageState) -> TriageState:
     symptoms = state.get("symptoms", [])
 
     with LatencyTracker("tavily_search") as tracker:
-        results = search_medical_info(symptoms)
+        results = await asyncio.to_thread(search_medical_info, symptoms)
 
     state["retrieved_info"] = results
 

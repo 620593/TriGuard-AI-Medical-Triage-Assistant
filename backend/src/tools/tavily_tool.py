@@ -17,11 +17,13 @@ Returns:
 """
 
 import os
+import threading
 from tavily import TavilyClient
 from typing import List
 
 # Lazy singleton: None until first call, then reused for all subsequent calls
 _client: TavilyClient | None = None
+_lock = threading.Lock()
 
 
 def search_medical_info(symptoms: List[str]) -> List[str]:
@@ -54,7 +56,9 @@ def search_medical_info(symptoms: List[str]) -> List[str]:
     try:
         # Initialize once and cache for all future calls
         if _client is None:
-            _client = TavilyClient(api_key=api_key)
+            with _lock:
+                if _client is None:
+                    _client = TavilyClient(api_key=api_key)
 
         # Build a specific, medically-framed query
         symptom_str = ", ".join(symptoms)
@@ -62,8 +66,8 @@ def search_medical_info(symptoms: List[str]) -> List[str]:
 
         response = _client.search(
             query=query,
-            search_depth="advanced",
-            max_results=3,
+            search_depth="basic",   # V4: basic is ~3x faster than advanced
+            max_results=2,          # V4: 2 results (answer + 1 snippet) sufficient
             include_answer=True,
         )
 

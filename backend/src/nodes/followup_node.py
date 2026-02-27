@@ -12,13 +12,15 @@ from backend.src.tools.groq_llama_tool import call_llama
 from backend.src.state.state import TriageState
 from backend.src.logging.logger import get_logger, log_event
 
+import asyncio
+
 logger = get_logger("followup")
 
 MIN_SYMPTOMS = 2
 HIGH_CONFIDENCE = 0.75
 
 
-def followup_node(state: TriageState) -> TriageState:
+async def followup_node(state: TriageState) -> TriageState:
     """
     Evaluates whether a clarifying question is needed before retrieval.
 
@@ -65,7 +67,7 @@ def followup_node(state: TriageState) -> TriageState:
         "Ask ONE focused question (max 20 words):"
     )
 
-    question = call_llama(prompt, max_tokens=60).strip()
+    question = (await asyncio.to_thread(call_llama, prompt, max_tokens=60)).strip()
 
     if not question:
         question = "Can you describe your symptoms in more detail?"

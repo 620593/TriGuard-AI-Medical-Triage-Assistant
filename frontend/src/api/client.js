@@ -7,6 +7,17 @@ const client = axios.create({
   },
 });
 
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error(
+      "[API Error] intercepted:",
+      error.response?.data || error.message,
+    );
+    return Promise.reject(error);
+  },
+);
+
 export const triageAPI = {
   // Text triage
   triage: (data) => client.post("/triage", data),
@@ -31,6 +42,20 @@ export const triageAPI = {
 
   // Health check
   getHealth: () => client.get("/health"),
+
+  // History & Reports
+  getSessions: (userId = "anonymous") =>
+    client.get("/sessions", { headers: { "X-User-Id": userId } }),
+  getReports: (userId = "anonymous") =>
+    client.get("/reports", { headers: { "X-User-Id": userId } }),
+  deleteReport: (reportId, userId = "anonymous") =>
+    client.delete(`/reports/${reportId}`, { headers: { "X-User-Id": userId } }),
+
+  // Static Resource Helpers
+  getStaticAudioUrl: (filename) =>
+    filename ? `http://localhost:8000/static/audio/${filename}` : null,
+  getStaticNutritionUrl: (filename) =>
+    filename ? `http://localhost:8000/static/nutrition/${filename}` : null,
 };
 
 export default client;

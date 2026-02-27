@@ -12,10 +12,12 @@ from backend.src.tools.mental_health_tool import detect_mental_health_crisis
 from backend.src.state.state import TriageState
 from backend.src.logging.logger import get_logger, log_event
 
+import asyncio
+
 logger = get_logger("mental_health")
 
 
-def mental_health_node(state: TriageState) -> TriageState:
+async def mental_health_node(state: TriageState) -> TriageState:
     """
     Checks for mental health crisis signals and overrides risk if found.
 
@@ -27,7 +29,7 @@ def mental_health_node(state: TriageState) -> TriageState:
     """
     messages = state.get("messages", [])
 
-    crisis_detected = detect_mental_health_crisis(messages)
+    crisis_detected = await asyncio.to_thread(detect_mental_health_crisis, messages)
     state["mental_health_flag"] = crisis_detected
 
     if crisis_detected:

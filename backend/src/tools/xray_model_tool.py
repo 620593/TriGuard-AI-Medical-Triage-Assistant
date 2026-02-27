@@ -1,13 +1,18 @@
 """
-xray_model_tool.py  (Version 3)
+xray_model_tool.py  (Version 4)
 ----------------------------------
-Chest X-ray abnormality detection using a HuggingFace vision model.
+Chest X-ray / bone X-ray abnormality detection using a HuggingFace vision model.
 
 Model:
-    microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224
-    (or similar chest X-ray classification model).
+    openai/clip-vit-base-patch16 via zero-shot-image-classification pipeline.
 
-    Falls back to a zero-shot classifier if the primary model is unavailable.
+V4 fix:
+    ZeroShotImageClassificationPipeline requires the image as the FIRST
+    positional argument AND candidate_labels as a keyword argument.
+    Previous call used `images=img` (wrong keyword) which caused a
+    TypeError: "missing 1 required positional argument: 'image'"
+    that was silently caught, returning empty results, causing downstream
+    LLaMA to hallucinate generic "cold and fever" for every X-ray upload.
 
 Anti-hallucination:
     This tool ONLY returns model predictions with confidence scores.
@@ -18,7 +23,7 @@ Returns:
     dict: {"findings": str, "confidence": float, "raw_labels": list}
 """
 
-import os
+import io
 
 try:
     from PIL import Image
@@ -45,7 +50,8 @@ def _get_classifier():
     return _classifier
 
 
-# Candidate labels for chest X-ray classification
+# Candidate labels for chest X-ray / bone X-ray classification
+# Added "bone fracture" and "broken bone" so the model can detect limb fractures
 _XRAY_LABELS = [
     "normal chest x-ray",
     "pneumonia",
@@ -55,17 +61,22 @@ _XRAY_LABELS = [
     "atelectasis",
     "pneumothorax",
     "fracture",
+    "bone fracture",
+    "broken bone",
     "consolidation",
     "edema",
 ]
 
 
-def analyze_xray(image_path: str) -> dict:
+def analyze_xray(image_bytes: bytes) -> dict:
     """
-    Classifies a chest X-ray image against common abnormality labels.
+    Classifies a chest/bone X-ray image against common abnormality labels.
+
+    Accepts raw image bytes (JPEG, PNG, WebP, BMP, TIFF, GIF) directly
+    from the in-memory upload pipeline — no temp file required.
 
     Args:
-        image_path: Path to the X-ray image file.
+        image_bytes: Raw bytes of the X-ray image file.
 
     Returns:
         dict: {
@@ -84,8 +95,8 @@ def analyze_xray(image_path: str) -> dict:
         print("[xray_model_tool] transformers or Pillow not installed.")
         return empty_result
 
-    if not os.path.exists(image_path):
-        print(f"[xray_model_tool] File not found: {image_path}")
+    if not image_bytes or not isinstance(image_bytes, (bytes, bytearray)):
+        print("[xray_model_tool] No image bytes provided.")
         return empty_result
 
     classifier = _get_classifier()
@@ -93,12 +104,16 @@ def analyze_xray(image_path: str) -> dict:
         return empty_result
 
     try:
-        img = Image.open(image_path).convert("RGB")
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-        results = classifier(
-            images=img,
-            candidate_labels=_XRAY_LABELS,
-        )
+        # ── V4 Fix: correct pipeline call signature ───────────────────────────
+        # ZeroShotImageClassificationPipeline call signature:
+        #   pipeline(image, candidate_labels=...)  ← image as FIRST positional arg
+        # NOT:
+        #   pipeline(images=img, ...)              ← 'images' is the wrong keyword
+        # The wrong keyword caused TypeError that was caught and returned empty_result,
+        # so LLaMA had no X-ray context and hallucinated generic symptoms.
+        results = classifier(img, candidate_labels=_XRAY_LABELS)
 
         # Take top 3 predictions
         top_3 = results[:3] if len(results) >= 3 else results
@@ -112,7 +127,7 @@ def analyze_xray(image_path: str) -> dict:
 
         # Build human-readable findings
         if top_label == "normal chest x-ray" and top_score > 0.5:
-            findings = "No significant abnormalities detected in the chest X-ray."
+            findings = "No significant abnormalities detected in the X-ray."
         else:
             findings_list = ", ".join(
                 f"{r['label']} ({r['score']:.0%})" for r in raw_labels

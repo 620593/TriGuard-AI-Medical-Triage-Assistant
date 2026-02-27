@@ -11,10 +11,12 @@ from backend.src.tools.nutrition_image_tool import generate_nutrition_advice
 from backend.src.state.state import TriageState
 from backend.src.logging.logger import get_logger, log_event
 
+import asyncio
+
 logger = get_logger("nutrition")
 
 
-def nutrition_node(state: TriageState) -> TriageState:
+async def nutrition_node(state: TriageState) -> TriageState:
     """
     Generates nutrition advice for low/moderate risk patients.
 
@@ -35,7 +37,7 @@ def nutrition_node(state: TriageState) -> TriageState:
     symptoms = state.get("symptoms", [])
 
     try:
-        result = generate_nutrition_advice(symptoms=symptoms, risk_level=risk_level)
+        result = await asyncio.to_thread(generate_nutrition_advice, symptoms=symptoms, risk_level=risk_level)
         state["nutrition_advice"] = result.get("advice", "")
         state["nutrition_image"] = result.get("image_url", "")
 

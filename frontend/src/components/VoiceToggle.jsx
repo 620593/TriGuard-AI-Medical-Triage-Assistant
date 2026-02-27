@@ -1,4 +1,5 @@
 import { Mic, MicOff } from "lucide-react";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 
 const VoiceToggle = ({ isActive, onClick }) => {
@@ -8,8 +9,8 @@ const VoiceToggle = ({ isActive, onClick }) => {
         onClick={onClick}
         className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
           isActive
-            ? "bg-red-500 text-white shadow-lg shadow-red-500/30 ring-4 ring-red-100 dark:ring-red-900/20"
-            : "bg-medical-primary text-white shadow-lg shadow-teal-500/30"
+            ? "bg-gradient-to-b from-red-500 to-red-600 shadow-[0_5px_10px_rgba(239,68,68,0.4),inset_0_2px_1px_rgba(255,255,255,0.5)] text-white ring-4 ring-red-100 dark:ring-red-900/20 active:translate-y-1 active:shadow-[inset_0_4px_6px_rgba(0,0,0,0.3)] cursor-pointer"
+            : "skeuo-btn-primary !rounded-full"
         }`}
       >
         <AnimatePresence mode="wait">

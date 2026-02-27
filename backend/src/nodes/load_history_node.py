@@ -1,30 +1,27 @@
 """
-load_history_node.py  (Version 2 — Session Manager)
+load_history_node.py  (Version 3 — History Opt-In)
 ------------------------------------------------------
-First node in the graph. Manages session state from history.json.
+Manages session state from history.json.
+
+V3 changes:
+    - History loading is now OPT-IN via state['use_history'].
+    - By default (use_history is absent or False), the node is a pure
+      pass-through. Each request starts with a clean, isolated context.
+    - Only when the user explicitly requests past history
+      (use_history=True in the API call) are prior messages merged.
+    - Fewer tokens in context = faster LLM inference.
 
 Three behaviours:
-  1. new_session  → Wipe old history; start clean. (python -m src.main --new)
-  2. _mid_session → Already in a follow-up loop; state is correct in memory.
-                    Skip disk read to prevent message duplication.
-  3. first turn   → Load history.json and merge prior context into state.
-
-Why the _mid_session flag (not followup_count):
-    followup_count is managed internally by followup_node, not by main.py.
-    Relying on it here would couple two unrelated concerns.
-    _mid_session is an explicit, intent-expressing flag set by main.py
-    ONLY when it is about to re-invoke the graph for a follow-up turn.
-    This removes tight coupling and makes the guard testable in isolation.
-
-Input:
-    state (TriageState): State from main.py (fresh, mid-session, or new-session).
-
-Returns:
-    TriageState: State ready for the rest of the pipeline.
+  1. use_history=False (default) → Pass-through. No disk read.
+  2. new_session                 → Wipe state fields; start clean.
+  3. use_history=True            → Load history.json and merge (capped at 10 msgs).
 """
 
 from backend.src.tools.history_tool import load_history
 from backend.src.state.state import TriageState
+from backend.src.logging.logger import get_logger, log_event
+
+logger = get_logger("load_history")
 
 
 def load_history_node(state: TriageState) -> TriageState:
@@ -32,14 +29,12 @@ def load_history_node(state: TriageState) -> TriageState:
     Loads, resets, or passes through session state depending on context.
 
     Args:
-        state (TriageState): State built by main.py or carried from a prior turn.
+        state (TriageState): State built by the API endpoint.
 
     Returns:
-        TriageState: State ready for symptom extraction and further processing.
+        TriageState: State ready for the rest of the pipeline.
     """
-    # ── Branch 1: New session requested ───────────────────────────────────────
-    # User ran: python -m src.main --new
-    # Wipe everything except the current user message and start fresh.
+    # ── Branch 1: New session requested ──────────────────────────────────────────
     if state.get("next_action") == "new_session":
         state["next_action"] = ""
         state["followup_count"] = 0
@@ -50,31 +45,40 @@ def load_history_node(state: TriageState) -> TriageState:
         state["risk_confidence"] = 0.0
         state["mental_health_flag"] = False
         state["messages"] = [state["messages"][-1]]   # Keep only current input
+        log_event(logger, "history_reset", reason="new_session")
         return state
 
-    # ── Branch 2: Mid-session follow-up loop ───────────────────────────────────
-    # main.py sets _mid_session=True before each follow-up re-invocation.
-    # State is already correctly populated in memory — skip disk to avoid
-    # prepending history messages a second time (which would double them).
+    # ── Branch 2: Mid-session follow-up loop ────────────────────────────────────
+    # State is already correct in memory. Skip to avoid double-prepending.
     if state.get("_mid_session", False):
-        return state   # State is already correct — no disk read needed
+        return state
 
-    # ── Branch 3: First turn of a continuing session ──────────────────────────
-    # Load history.json and merge prior context (cross-session continuity).
-    history = load_history()   # Returns {} if file doesn't exist
+    # ── Branch 3: History opt-in check (DEFAULT: skip) ────────────────────────
+    # History is NOT loaded unless the caller explicitly sets use_history=True.
+    # This keeps each triage request isolated with a clean LLM context window,
+    # improves inference speed, and prevents cross-session hallucinations.
+    if not state.get("use_history", False):
+        log_event(logger, "history_skipped", reason="use_history_not_set")
+        return state
+
+    # ── Branch 4: Explicit history load (opt-in) ──────────────────────────────
+    history = load_history()
 
     if history:
-        # Prepend prior messages so LLaMA has conversation context
         if history.get("messages"):
-            state["messages"] = history["messages"] + state["messages"]
+            # Cap merged history at 10 messages to keep context lean
+            recent_history = history["messages"][-10:]
+            state["messages"] = recent_history + state["messages"]
 
-        # Restore follow-up count from prior turn
         state["followup_count"] = history.get("followup_count", 0)
 
-        # Merge previously identified symptoms (union — no duplicates)
         if history.get("symptoms"):
             existing = set(history["symptoms"])
             current = set(state.get("symptoms", []))
             state["symptoms"] = list(existing | current)
+
+        log_event(logger, "history_loaded",
+                  message_count=len(history.get("messages", [])),
+                  symptom_count=len(history.get("symptoms", [])))
 
     return state

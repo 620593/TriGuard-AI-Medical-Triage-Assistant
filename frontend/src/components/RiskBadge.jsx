@@ -4,29 +4,34 @@ const RiskBadge = ({ level = "LOW" }) => {
   const configs = {
     LOW: {
       color:
-        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+        "bg-green-500/20 text-green-300 border border-green-500/30 backdrop-blur-md",
       icon: <CheckCircle size={14} />,
       label: "Low Risk",
     },
     MEDIUM: {
       color:
-        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+        "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 backdrop-blur-md",
       icon: <Info size={14} />,
       label: "Medium Risk",
     },
     HIGH: {
-      color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+      color:
+        "bg-red-500/20 text-red-300 border border-red-500/30 backdrop-blur-md",
       icon: <AlertTriangle size={14} />,
       label: "High Risk",
     },
     CRITICAL: {
-      color: "bg-red-600 text-white animate-pulse",
+      color:
+        "bg-red-600 text-white animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.7)]",
       icon: <AlertCircle size={14} />,
       label: "Immediate Action Required",
     },
   };
 
-  const config = configs[level] || configs.LOW;
+  const normalizedLevel = String(level).toUpperCase();
+  const finalLevel =
+    normalizedLevel === "MODERATE" ? "MEDIUM" : normalizedLevel;
+  const config = configs[finalLevel] || configs.LOW;
 
   return (
     <div

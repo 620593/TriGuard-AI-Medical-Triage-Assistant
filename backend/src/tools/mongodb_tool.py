@@ -19,23 +19,47 @@ Design:
 """
 
 import os
+import re
 from datetime import datetime, timezone
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# ── Lazy singleton ─────────────────────────────────────────────────────────────
+# ── ObjectId validation ────────────────────────────────────────────────────────
+# MongoDB ObjectId strings are exactly 24 hex characters.
+_OBJECT_ID_RE = re.compile(r"^[0-9a-fA-F]{24}$")
+
+
+def _is_valid_object_id(value: str) -> bool:
+    """Returns True if value is a properly-formatted MongoDB ObjectId string."""
+    return bool(value and _OBJECT_ID_RE.match(value))
+
+import logging
+
+_db_logger = logging.getLogger("triguard.mongodb")
+
+# ── Connection singleton ───────────────────────────────────────────────────────
+# Motor's AsyncIOMotorClient is not safe to construct from multiple coroutines
+# simultaneously.  We initialise it exactly once inside the FastAPI lifespan
+# (via ensure_indexes → _get_db) before any request can arrive.
 _client: AsyncIOMotorClient | None = None
 _db = None
 
 
 def _get_db():
-    """Returns the MongoDB database instance (lazy singleton)."""
+    """Returns the MongoDB database instance.
+    
+    On first call, creates the AsyncIOMotorClient.  Because this function is
+    ONLY called during the lifespan startup (for ensure_indexes) before the
+    server starts serving traffic, and by individual async endpoint handlers
+    one at a time, there is no concurrency risk.
+    """
     global _client, _db
     if _db is None:
         uri = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
-        _client = AsyncIOMotorClient(uri)
+        _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
         _db = _client["triguard"]
+        _db_logger.info("MongoDB client initialised.")
     return _db
 
 
@@ -78,11 +102,19 @@ async def update_session(session_id: str, state_updates: dict) -> bool:
     """
     from bson import ObjectId
     db = _get_db()
+
+    # Fast-path rejection: validate format before any ObjectId construction
+    session_id_str = str(session_id)
+    if not _is_valid_object_id(session_id_str):
+        return False
+
+    obj_id = ObjectId(session_id_str)
+
     # Flatten state updates under "state." prefix for atomic $set
-    flat = {f"state.{k}": v for k, v in state_updates.items()}
+    flat = {f"state.{str(k)}": v for k, v in state_updates.items()}
     flat["updated_at"] = datetime.now(timezone.utc)
     result = await db.sessions.update_one(
-        {"_id": ObjectId(session_id)},
+        {"_id": obj_id},
         {"$set": flat}
     )
     return result.modified_count > 0
@@ -97,7 +129,14 @@ async def load_session(session_id: str) -> dict | None:
     """
     from bson import ObjectId
     db = _get_db()
-    doc = await db.sessions.find_one({"_id": ObjectId(session_id)})
+
+    # Fast-path rejection: validate format before any ObjectId construction
+    session_id_str = str(session_id)
+    if not _is_valid_object_id(session_id_str):
+        return None
+
+    obj_id = ObjectId(session_id_str)
+    doc = await db.sessions.find_one({"_id": obj_id})
     if doc:
         doc["_id"] = str(doc["_id"])   # Serialize ObjectId for JSON compat
     return doc
@@ -113,9 +152,11 @@ async def save_report(session_id: str, report_data: dict) -> str:
         str: Report ObjectId string.
     """
     db = _get_db()
+    # Validate and coerce session_id to a safe string
+    session_id_str = str(session_id) if isinstance(session_id, str) else ""
     doc = {
-        "session_id": session_id,
-        "report": report_data,
+        "session_id": session_id_str,
+        "report": report_data if isinstance(report_data, dict) else {},
         "created_at": datetime.now(timezone.utc),
     }
     result = await db.reports.insert_one(doc)
@@ -133,9 +174,11 @@ async def insert_log(event: str, data: dict) -> None:
         data: Arbitrary structured data.
     """
     db = _get_db()
+    # Coerce event to a safe string; reject non-string types silently
+    event_str = str(event) if isinstance(event, str) else "unknown_event"
     doc = {
-        "event": event,
-        "data": data,
+        "event": event_str,
+        "data": data if isinstance(data, dict) else {},
         "timestamp": datetime.now(timezone.utc),
     }
     await db.logs.insert_one(doc)
@@ -152,8 +195,9 @@ async def upsert_user(user_id: str, profile: dict) -> None:
         profile: Fields to set (language preference, etc.).
     """
     db = _get_db()
+    safe_user_id = str(user_id)
     await db.users.update_one(
-        {"user_id": user_id},
+        {"user_id": safe_user_id},
         {"$set": {**profile, "updated_at": datetime.now(timezone.utc)}},
         upsert=True,
     )
@@ -162,7 +206,64 @@ async def upsert_user(user_id: str, profile: dict) -> None:
 async def get_user(user_id: str) -> dict | None:
     """Fetches a user profile by user_id."""
     db = _get_db()
-    doc = await db.users.find_one({"user_id": user_id})
+    doc = await db.users.find_one({"user_id": str(user_id)})
     if doc:
         doc["_id"] = str(doc["_id"])
     return doc
+
+
+# ── History/Discovery operations ──────────────────────────────────────────────
+
+async def list_user_sessions(user_id: str, limit: int = 20) -> list:
+    """Retrieves recent sessions for a specific user."""
+    db = _get_db()
+    cursor = db.sessions.find({"user_id": str(user_id)}).sort("updated_at", -1).limit(limit)
+    sessions = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        sessions.append(doc)
+    return sessions
+
+
+async def list_user_reports(user_id: str, limit: int = 20) -> list:
+    """Retrieves recent triage reports for a specific user."""
+    db = _get_db()
+    cursor = db.reports.find({"report.user_id": str(user_id)}).sort("created_at", -1).limit(limit)
+    reports = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        reports.append(doc)
+    return reports
+
+async def delete_user_report(report_id: str, user_id: str) -> bool:
+    """Deletes a specific triage report if it belongs to the user."""
+    from bson import ObjectId
+    db = _get_db()
+    
+    if not _is_valid_object_id(report_id):
+        return False
+        
+    result = await db.reports.delete_one({
+        "_id": ObjectId(report_id),
+        "report.user_id": str(user_id)
+    })
+    return result.deleted_count > 0
+
+async def ensure_indexes():
+    """Ensure essential indexes exist for performance and uniqueness."""
+    db = _get_db()
+    
+    # Sessions
+    await db.sessions.create_index("user_id")
+    await db.sessions.create_index("updated_at")
+    
+    # Reports
+    await db.reports.create_index("report.user_id")
+    await db.reports.create_index("created_at")
+    
+    # Users
+    await db.users.create_index("user_id", unique=True)
+    
+    # Logs
+    await db.logs.create_index("timestamp")
+    await db.logs.create_index("event")

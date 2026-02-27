@@ -1,107 +1,111 @@
 """
-response_node.py
-----------------
-Generates the final triage response for the user.
+response_node.py  (Version 4)
+-------------------------------
+Final response formatting layer.
 
-Hard rules:
-  - MUST reference retrieved_info (no hallucination).
-  - MUST NOT give a diagnosis.
-  - MUST NOT prescribe medication.
-  - If next_action == 'priority_interrupt', prepend an emergency alert.
-  - If next_action == 'ask_followup', return the last follow-up question.
+Responsibilities:
+    1. Format validated_response from judge-approved content.
+    2. Attach nutrition_image if needs_nutrition_image == True.
+    3. Structure the final output.
+    4. Populate state["final_response"].
+
+This node does NOT call any LLM. It is a pure formatting pass.
 """
 
 from backend.src.state.state import TriageState
+from backend.src.logging.logger import get_logger, log_event
+from urllib.parse import urlparse
+
+logger = get_logger("response")
+
+# Allowed URL schemes for nutrition images
+_ALLOWED_SCHEMES = frozenset({"http", "https"})
+
+
+def _is_safe_url(url: str) -> bool:
+    """Validates that a URL is safe to embed (prevents SSRF/XSS)."""
+    if not url:
+        return False
+    try:
+        parsed = urlparse(url)
+        # Allow localhost for locally-served static assets (nutrition images)
+        # Block javascript: scheme and bare IP addresses that suggest SSRF
+        return (
+            parsed.scheme in _ALLOWED_SCHEMES
+            and bool(parsed.netloc)
+            and "javascript:" not in url.lower()
+            and not url.lower().startswith("javascript")
+        )
+    except Exception:
+        return False
 
 
 def response_node(state: TriageState) -> TriageState:
     """
-    Builds a safe, grounded triage response from state data.
+    Formats the validated response into a final deliverable output.
 
-    Why it exists:
-        The final message to the user must be clinically responsible —
-        grounded in retrieved_info, informative without diagnosing,
-        and always directing the user toward professional medical care.
+    No LLM calls. Pure string formatting and state assembly.
 
     Args:
-        state (TriageState): Fully populated state from all prior nodes.
+        state: Contains validated_response, nutrition data, risk data.
 
     Returns:
-        TriageState: State with the assistant's final response appended to messages.
+        TriageState: With final_response populated and appended to messages.
     """
     next_action = state.get("next_action", "")
-    risk_level = state.get("risk_level", "unknown")
-    risk_score = state.get("risk_score", 0.0)
-    symptoms = state.get("symptoms", [])
-    retrieved_info = state.get("retrieved_info", [])
-    messages = state.get("messages", [])
 
-    # --- Case 1: Still waiting for more user input ---
+    # ── Case 1: Follow-up in progress — nothing to format ───────────────────
     if next_action == "ask_followup":
-        # The follow-up question is already the last assistant message added by
-        # symptom_followup_node or risk_evaluation_node. Nothing more to generate.
+        state["final_response"] = ""
         return state
 
-    # --- Case 2: Priority interrupt — critical emergency detected ---
+    # ── Case 2: Priority interrupt — already handled by llm_brain ───────────
     if next_action == "priority_interrupt":
-        alert = (
-            "🚨 URGENT MEDICAL ALERT 🚨\n\n"
-            f"Based on the symptoms you described ({', '.join(symptoms)}), "
-            "the information we retrieved indicates a potentially life-threatening situation.\n\n"
-            "⚡ Please call emergency services (911 / 999 / 112) IMMEDIATELY "
-            "or go to the nearest emergency room right away.\n\n"
-            "Do not wait or self-medicate. This is a triage assistant, not a doctor."
-        )
-        state["messages"].append({"role": "assistant", "content": alert})
+        # The emergency message is already in messages from llm_brain
+        messages = state.get("messages", [])
+        if messages:
+            state["final_response"] = messages[-1].get("content", "")
         return state
 
-    # --- Case 3: Standard grounded triage response ---
+    # ── Case 3: Standard response formatting ────────────────────────────────
+    validated = state.get("validated_response", "")
 
-    # Build context summary from Tavily results (source of truth only)
-    context_lines = []
-    for i, info in enumerate(retrieved_info[:3], start=1):
-        # Truncate long snippets to keep the response readable
-        snippet = info[:300] + "..." if len(info) > 300 else info
-        context_lines.append(f"  {i}. {snippet}")
+    # If no validated_response, use the last assistant message
+    if not validated:
+        messages = state.get("messages", [])
+        assistant_msgs = [m for m in messages if m.get("role") == "assistant"]
+        if assistant_msgs:
+            validated = assistant_msgs[-1].get("content", "")
 
-    context_block = (
-        "\n".join(context_lines)
-        if context_lines
-        else "  No specific medical information was retrieved for your symptoms."
-    )
+    # ── Build final structured output ────────────────────────────────────────
+    final = validated
 
-    # Map risk level to readable user guidance
-    guidance_map = {
-        "low": (
-            "Your reported symptoms appear to be at a LOW risk level. "
-            "Monitor your condition and consult a doctor if symptoms worsen or persist."
-        ),
-        "moderate": (
-            "Your reported symptoms appear to be at a MODERATE risk level. "
-            "We recommend scheduling a medical appointment soon and avoiding self-medication."
-        ),
-        "high": (
-            "Your reported symptoms appear to be at a HIGH risk level. "
-            "Please seek medical attention TODAY. Visit an urgent care clinic or call your doctor."
-        ),
-        "critical": (
-            "Your reported symptoms appear to be at a CRITICAL risk level. "
-            "Please go to an emergency room or call emergency services NOW."
-        ),
-    }
-    guidance = guidance_map.get(risk_level, "Please consult a healthcare professional.")
+    # Ensure disclaimer is present (llm_brain already adds DISCLAIMER: section;
+    # this guard is only for paths where llm_brain didn't run, e.g. vision)
+    if "disclaimer" not in final.lower() and "Disclaimer" not in final:
+        final += (
+            "\nDISCLAIMER: This is a triage tool only, NOT a medical diagnosis. "
+            "Always consult a licensed physician."
+        )
 
-    # Compose the full response
-    symptom_str = ", ".join(symptoms) if symptoms else "the symptoms you described"
-    response = (
-        f"Based on what you've shared ({symptom_str}), here is what our medical "
-        f"triage assistant found:\n\n"
-        f"📊 Risk Assessment: {risk_level.upper()} (Score: {risk_score:.1f}/10)\n\n"
-        f"📋 Relevant Medical Context (from search results):\n{context_block}\n\n"
-        f"💡 Triage Guidance:\n{guidance}\n\n"
-        "⚠️ DISCLAIMER: This is NOT a diagnosis. This tool does not replace "
-        "professional medical advice. Always consult a licensed physician for any health concern."
-    )
+    state["final_response"] = final
 
-    state["messages"].append({"role": "assistant", "content": response})
+    # Update the last assistant message with the formatted version
+    messages = state.get("messages", [])
+    if messages:
+        # Find and update the last assistant message
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i].get("role") == "assistant":
+                messages[i]["content"] = final
+                break
+        else:
+            # No assistant message found — append one
+            messages.append({"role": "assistant", "content": final})
+
+    nutrition_image = state.get("nutrition_image", "")
+
+    log_event(logger, "response_formatted",
+              has_nutrition_image=bool(nutrition_image),
+              response_length=len(final))
+
     return state

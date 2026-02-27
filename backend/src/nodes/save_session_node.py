@@ -1,93 +1,90 @@
 """
-save_session_node.py  (Version 3)
------------------------------------
-Persists session state to MongoDB after each graph invocation.
+save_session_node.py  (Version 4 — Lightweight)
+-----------------------------------------------
+Persists session state metadata to MongoDB.
 
-Replaces V2's file-based save_history_node with proper database persistence.
-Uses atomic $set updates — never overwrites the full document.
+V4 changes:
+    - Stateless modes (image, xray, voice) skip session save entirely.
+      These requests produce no cross-session continuity state.
+    - Report saving is skipped when use_history=False (default).
+    - MongoDB update is fire-and-forget (does not block the response).
+    - Only minimal metadata is persisted to keep writes fast.
 """
 
+import asyncio
 from backend.src.state.state import TriageState
-from backend.src.tools.mongodb_tool import update_session, save_report, insert_log
+from backend.src.tools.mongodb_tool import update_session, save_report
 from backend.src.logging.logger import get_logger, log_event
+from backend.src.pipeline_config import STATELESS_INPUT_MODES
 
 logger = get_logger("save_session")
 
 
 async def save_session_node(state: TriageState) -> TriageState:
     """
-    Saves the current session state to MongoDB.
-    Creates a report document if the triage is complete.
+    Persists minimal session metadata to MongoDB (when applicable).
 
     Args:
-        state: Full pipeline state.
+        state: Fully updated pipeline state.
 
     Returns:
-        TriageState: Unchanged (pass-through after saving).
+        TriageState: Unchanged (side-effect is DB write only).
     """
     session_id = state.get("session_id", "")
 
-    # Skip persistence if no session (local/fallback mode)
     if not session_id or session_id == "local":
         return state
 
-    # Cap conversation history to avoid unbounded growth in MongoDB document size
-    MAX_HISTORY_MESSAGES = 50
-    messages = state.get("messages", [])
-    if len(messages) > MAX_HISTORY_MESSAGES:
-        messages = messages[-MAX_HISTORY_MESSAGES:]
+    # Skip for stateless modes — nothing meaningful to persist
+    input_mode = state.get("input_mode", "text")
+    if input_mode in STATELESS_INPUT_MODES:
+        log_event(logger, "session_save_skipped", reason="stateless_mode", mode=input_mode)
+        return state
 
-    # Build atomic update payload (only changed fields)
+    # Skip when history is not being tracked for this session
+    if not state.get("use_history", False):
+        log_event(logger, "session_save_skipped", reason="use_history_not_set")
+        return state
+
+    # Build minimal vision metadata (no raw data, no findings lists)
+    vision_findings = state.get("vision_findings", {})
+    vision_metadata = {
+        "image_type": vision_findings.get("image_type", "unknown"),
+        "confidence": vision_findings.get("confidence", 0.0),
+        "visual_findings_count": len(vision_findings.get("visual_findings", []))
+    } if vision_findings else {}
+
     updates = {
-        "messages": messages,
+        "messages": state.get("messages", [])[-20:],   # Cap to 20 (reduced from 50)
         "symptoms": state.get("symptoms", []),
-        "followup_count": state.get("followup_count", 0),
-        "retrieved_info": state.get("retrieved_info", []),
         "risk_score": state.get("risk_score", 0.0),
         "risk_level": state.get("risk_level", ""),
-        "risk_confidence": state.get("risk_confidence", 0.0),
-        "mental_health_flag": state.get("mental_health_flag", False),
         "language": state.get("language", "en"),
-        "next_action": state.get("next_action", ""),
+        "vision_metadata": vision_metadata,
     }
 
+    # Fire session update as background task (truly non-blocking)
+    # Using create_task means we don't await the DB write —
+    # the graph node returns immediately and the write happens concurrently.
     try:
-        await update_session(session_id, updates)
-        log_event(logger, "session_saved", session_id=session_id)
+        asyncio.create_task(update_session(session_id, updates))
     except Exception as e:
-        log_event(logger, "session_save_failed", error=str(e))
+        logger.error(f"Failed to schedule session update: {e}")
 
-    # Save a report if triage is complete (not a follow-up)
+    # Save summary report in background (only for completed triage)
     next_action = state.get("next_action", "")
     if next_action not in ("ask_followup",):
         try:
             report_data = {
+                "user_id": state.get("user_id"),
+                "risk_level": state.get("risk_level", "low"),
                 "symptoms": state.get("symptoms", []),
-                "risk_score": state.get("risk_score", 0.0),
-                "risk_level": state.get("risk_level", ""),
-                "risk_confidence": state.get("risk_confidence", 0.0),
-                "mental_health_flag": state.get("mental_health_flag", False),
-                "judge_passed": state.get("judge_passed", True),
-                "language": state.get("language", "en"),
-                "input_mode": state.get("input_mode", "text"),
-                "nutrition_advice": state.get("nutrition_advice", ""),
+                "image_type": vision_metadata.get("image_type", "none"),
+                "confidence": vision_metadata.get("confidence", 0.0),
+                "timestamp": state.get("timestamp"),
             }
-            await save_report(session_id, report_data)
-            log_event(logger, "report_saved", session_id=session_id)
+            asyncio.create_task(save_report(session_id, report_data))
         except Exception as e:
-            log_event(logger, "report_save_failed", error=str(e))
-
-    # Log the triage event for observability
-    try:
-        await insert_log("triage_completed", {
-            "session_id": session_id,
-            "risk_level": state.get("risk_level", ""),
-            "risk_score": state.get("risk_score", 0.0),
-            "confidence": state.get("risk_confidence", 0.0),
-            "mental_health_flag": state.get("mental_health_flag", False),
-            "judge_passed": state.get("judge_passed", True),
-        })
-    except Exception as e:
-        log_event(logger, "log_insert_failed", error=str(e))
+            logger.error(f"Failed to schedule report save: {e}")
 
     return state

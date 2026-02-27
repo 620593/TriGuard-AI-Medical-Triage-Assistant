@@ -1,20 +1,29 @@
 """
-whisper_tool.py  (Version 3)
-------------------------------
+whisper_tool.py  (Version 4 — Production Hardened)
+---------------------------------------------------
 Speech-to-text using Groq's hosted Whisper API.
 
-Why Groq Whisper:
-    We already have a Groq API key for LLaMA. Groq hosts Whisper models
-    with fast inference, so we reuse the same client — no extra dependency.
+We already have a Groq API key for LLaMA. Groq hosts Whisper models
+with fast inference, so we reuse the same client — no extra dependency.
 
 Returns:
-    dict: { "text": str, "language": str }  — transcribed text + detected language.
+    dict: { "text": str, "language": str } — transcribed text + detected language.
+
+V4 changes:
+    - Uses structured logger instead of print() for observability.
+    - Thread-safe double-checked locking for client singleton.
 """
 
+import logging
 import os
+import threading
+
 from groq import Groq
 
+_logger = logging.getLogger("triguard.whisper")
+
 _client: Groq | None = None
+_lock = threading.Lock()
 
 
 def transcribe_audio(audio_path: str) -> dict:
@@ -27,18 +36,21 @@ def transcribe_audio(audio_path: str) -> dict:
 
     Returns:
         dict: {"text": transcribed_text, "language": detected_language_code}
-              Returns {"text": "", "language": "en"} on failure.
+              Returns {"text": "", "language": "en"} on any failure.
     """
     global _client
 
     api_key = os.environ.get("GROQ_API_KEY", "")
     if not api_key:
-        print("[whisper_tool] GROQ_API_KEY not set — skipping transcription.")
+        _logger.warning("GROQ_API_KEY not set — skipping transcription.")
         return {"text": "", "language": "en"}
 
     try:
+        # Double-checked locking for thread-safe singleton init
         if _client is None:
-            _client = Groq(api_key=api_key)
+            with _lock:
+                if _client is None:
+                    _client = Groq(api_key=api_key)
 
         with open(audio_path, "rb") as audio_file:
             result = _client.audio.transcriptions.create(
@@ -48,14 +60,14 @@ def transcribe_audio(audio_path: str) -> dict:
             )
 
         return {
-            "text": result.text.strip() if result.text else "",
+            "text":     result.text.strip() if result.text else "",
             "language": getattr(result, "language", "en") or "en",
         }
 
     except KeyboardInterrupt:
-        print("[whisper_tool] Transcription interrupted.")
+        _logger.warning("Transcription interrupted by KeyboardInterrupt.")
         return {"text": "", "language": "en"}
 
-    except Exception as e:
-        print(f"[whisper_tool] Transcription failed: {e}")
+    except Exception as exc:
+        _logger.error(f"Transcription failed: {exc}")
         return {"text": "", "language": "en"}

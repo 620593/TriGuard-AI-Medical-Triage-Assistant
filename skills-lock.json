@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "langgraph": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "d8504e7ac34c7521518343965af7535e1921ba64d106be921cc4032c5f3655d5"
+    }
+  }
+}

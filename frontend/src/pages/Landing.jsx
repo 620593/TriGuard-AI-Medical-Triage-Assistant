@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield,
   Activity,
@@ -22,7 +23,7 @@ const Landing = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center space-x-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-full mb-8 shadow-sm"
+            className="inline-flex items-center space-x-2 skeuo-panel !rounded-full px-4 py-2 mb-8"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-medical-primary opacity-75"></span>
@@ -35,10 +36,10 @@ const Landing = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl font-bold text-slate-900 dark:text-white mb-8 leading-tight"
+            className="text-5xl md:text-7xl font-bold text-white mb-8 leading-tight drop-shadow-xl"
           >
             Intelligent Triage. <br />
-            <span className="bg-gradient-to-r from-medical-primary to-medical-secondary bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent drop-shadow-md">
               Safe & Fast Advice.
             </span>
           </motion.h1>
@@ -47,7 +48,7 @@ const Landing = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-xl text-slate-500 max-w-3xl mx-auto mb-12"
+            className="text-xl text-slate-300 max-w-3xl mx-auto mb-12 shadow-black drop-shadow-md font-light"
           >
             Your AI-powered medical companion for symptom checking, X-ray
             analysis, and health risk assessment—accessible anywhere, anytime.
@@ -61,12 +62,12 @@ const Landing = () => {
           >
             <Link
               to="/triage"
-              className="px-8 py-4 bg-medical-primary text-white rounded-2xl font-bold flex items-center space-x-2 hover:bg-medical-secondary transition-all shadow-lg shadow-teal-500/20"
+              className="px-8 py-4 skeuo-btn-primary flex items-center space-x-2 text-lg"
             >
               <span>Start Free Triage</span>
               <ArrowRight size={20} />
             </Link>
-            <button className="px-8 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold hover:bg-slate-50 transition-all">
+            <button className="px-8 py-4 skeuo-btn flex items-center space-x-2 text-lg">
               How it works
             </button>
           </motion.div>
@@ -74,7 +75,7 @@ const Landing = () => {
       </section>
 
       {/* Feature Grid */}
-      <section className="py-24 px-6 bg-slate-50 dark:bg-slate-950/50">
+      <section className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <FeatureCard
@@ -100,12 +101,18 @@ const Landing = () => {
 };
 
 const FeatureCard = ({ icon, title, description }) => (
-  <motion.div whileHover={{ y: -5 }} className="glass-card hover:bg-white">
-    <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center mb-6 shadow-sm border border-slate-100 dark:border-slate-700">
+  <motion.div
+    whileHover={{ y: -5, scale: 1.02 }}
+    className="skeuo-panel p-6 relative group overflow-hidden"
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-6 border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
       {icon}
     </div>
-    <h3 className="text-xl font-bold mb-4">{title}</h3>
-    <p className="text-slate-500 leading-relaxed text-sm">{description}</p>
+    <h3 className="text-xl font-bold mb-4 text-white">{title}</h3>
+    <p className="text-slate-300 leading-relaxed text-sm font-light">
+      {description}
+    </p>
   </motion.div>
 );
 

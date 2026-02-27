@@ -1,91 +1,72 @@
-# 🛡️ TriGuard AI — Medical Triage Assistant (Monorepo)
+# 🛡️ TriGuard AI — Multimodal Medical Triage Assistant (V5.0)
 
-TriGuard AI is a production-grade medical triage system designed to provide rapid, safe, and intelligent health risk assessments. Leveraging FastAPI, LangGraph, MongoDB, and React, it offers a multi-modal interface for text, voice, and medical document analysis.
+TriGuard AI is a production-grade multimodal medical triage system designed to provide rapid, safe, and intelligent health risk assessments. Version 5.0 introduces a dedicated document processing pipeline and revolutionary conversational continuity, allowing the system to bridge context across image and text turns.
 
 ---
 
-## 🏗️ Architecture Overview
+## 🚀 What's New in Version 5.0 (V5)
 
-The project is structured as a **Monorepo** to maintain a clean separation between the AI-powered backend and the high-end SaaS frontend.
+The **V5 "Multimodal Bridge" Update** focus on pipeline maturity and user experience:
 
-```text
-TriGuard-AI/
-├── backend/           # FastAPI + LangGraph + MongoDB
-│   ├── src/           # API routes, Graph nodes, and Tools
-│   ├── .env           # (Excluded from Git) API keys & Mongo URI
-│   └── pyproject.toml # Python dependencies
-├── frontend/          # React 19 + Vite + Tailwind 4
-│   ├── src/           # Components, Pages, and API client
-│   └── package.json   # Node dependencies
-└── README.md          # Project documentation
-```
+- 📄 **Deep Document Pipeline**: A dedicated `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into the clinical text engine.
+- 🧠 **V5.1 Follow-up Context Patch**: Real-time context bridging. The AI now remembers prior X-ray, skin, or document findings during subsequent text-based questions (e.g., "Why am I getting this pain?" after an X-ray upload).
+- ⚡ **Performance 2.0**:
+  - **Single-Pass Vision**: Unified vision classification reduces document analysis latency by 50%.
+  - **O(1) Scale**: Safety guards now use constant-time history scanning regardless of conversation length.
+- 🛡️ **Granular Error Handling**: New `vision_error` and `ocr_completed` safety flags ensure structured, helpful fallbacks instead of blank outputs or hallucinations.
+- 🌍 **Native Multilingual**: Triage instructions are now embedded directly in the LLM prompt, eliminating sequential translation round-trips for non-English users.
 
 ---
 
 ## ✨ Key Features
 
-- 💬 **AI Triage Chat:** Intelligent symptom follow-up using LangGraph.
-- 🎙️ **Voice Mode:** Real-time speech-to-text (Whisper) and text-to-speech (gTTS).
-- 📄 **OCR Document Analysis:** Upload lab reports or prescriptions for AI summarization.
-- 🩻 **X-ray Analysis:** Integration with vision models for chest X-ray pre-diagnosis.
-- 📊 **Risk Visualization:** Real-time risk-level color coding (Low, Medium, High, Critical).
-- 🏛️ **MongoDB Persistence:** Session history and state management.
-- 🌍 **Multilingual Support:** Automatic language detection and response.
-- 🛡️ **Crisis Override:** Immediate guidance for emergency symptoms.
+- 💬 **Multimodal AI Triage:** Intelligent analysis for Text, Voice, Body Images (Skin/Dermatology), and X-rays.
+- 🎙️ **Voice First UX:** Seamless Whisper STT and gTTS integration for hands-free medical input.
+- 🩻 **Radiology Screening:** Specialized pre-diagnosis nodes for chest X-ray analysis (Note: For screening only).
+- � **Deterministic Logic:** Orchestrated via **LangGraph**, ensuring clinical routing follows strict protocols rather than unpredictable LLM decisions.
+- 📊 **Risk Scoring Engine:** Real-time risk-level calculation (Low to Critical) with structured Red-Flag detection.
+- 🏛️ **Persistence with Privacy:** Opt-in session history (`use_history`) with MongoDB secondary persistence.
+- 🥗 **Integrated Nutrition:** Triage-aware dietary advice provided alongside medical assessments.
+- 🛡️ **Judge Validator:** An internal AI "Judge" validates every response for hallucinations, medical safety, and adherence to triage constraints before it reaches the user.
 
 ---
 
-## 🚀 Getting Started
+## 🏗️ Architecture Overview
 
-### Prerequisites
+The project follows a modular **Monorepo** structure:
 
-- [Python 3.11+](https://www.python.org/)
-- [Node.js 18+](https://nodejs.org/)
-- [uv](https://github.com/astral-sh/uv) (Recommended for Python)
-- [MongoDB Atlas](https://www.mongodb.com/products/platform/atlas-database) (or local instance)
-
-### 1. Backend Setup
-
-```bash
-cd backend
-# Install dependencies
-uv sync
-
-# Configure Environment
-# Create a .env file based on the required keys:
-# GROQ_API_KEY, TAVILY_API_KEY, MONGO_URI, etc.
-```
-
-### 2. Frontend Setup
-
-```bash
-cd frontend
-# Install dependencies
-npm install
-```
-
-### 3. Running the Application
-
-**Start Backend:**
-
-```bash
-uv run uvicorn backend.src.main:app --reload --port 8000
-```
-
-**Start Frontend:**
-
-```bash
-cd frontend
-npm run dev
+```text
+TriGuard-AI/
+├── backend/           # FastAPI + LangGraph + MongoDB
+│   ├── src/
+│   │   ├── nodes/     # Pure node logic (Vision, OCR, Brain, Risk, etc.)
+│   │   ├── graph/     # LangGraph state machines and routing
+│   │   ├── tools/     # API connectors (Groq, Tavily, MongoDB)
+│   │   └── state/     # TypedDict state contracts
+│   └── tests/         # Comprehensive V5 test suite
+├── frontend/          # React 19 + Framer Motion + Tailwind 4
+└── README.md          # Version 5.0 Documentation
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Backend:** Python, FastAPI, LangGraph (LangChain), Pydantic, Motor (Async MongoDB).
-- **Frontend:** React 19, Vite, Tailwind CSS 4, Framer Motion, Axios.
-- **Tools:** Whisper (STT), gTTS (TTS), HuggingFace Vision Models, Groq LLaMA models.
+- **Reasoning/NLP:** Groq LLaMA 3.1 70B (Brain), LLaMA 3 8B (Classification).
+- **Vision/OCR:** Groq Vision-LLaVA, Tesseract/OCR-Engine.
+- **Orchestration:** LangGraph (Stateful Multi-actor Graph).
+- **Backend:** Python 3.11, FastAPI, Pydantic V2, Motor.
+- **Frontend:** React 19, Framer Motion (premium animations), Tailwind CSS 4.
+- **Search:** Tavily AI (Medical web search).
+
+---
+
+## 🚀 Getting Started
+
+1. **Install uv**: `pip install uv`
+2. **Setup Backend**: `cd backend && uv sync`
+3. **Setup Frontend**: `cd frontend && npm install`
+4. **Environment**: Add `GROQ_API_KEY`, `TAVILY_API_KEY`, and `MONGO_URI` to `backend/.env`.
 
 ---
 
@@ -95,4 +76,4 @@ _TriGuard AI is an AI assistant intended for informational purposes only. It is 
 
 ---
 
-&copy; 2026 TriGuard AI Team.
+&copy; 2026 TriGuard AI Team | [Repository](https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant)

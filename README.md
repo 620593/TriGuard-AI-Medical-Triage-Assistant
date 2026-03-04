@@ -1,37 +1,76 @@
-# 🛡️ TriGuard AI — Multimodal Medical Triage Assistant (V5.0)
+<div align="center">
 
-TriGuard AI is a production-grade multimodal medical triage system designed to provide rapid, safe, and intelligent health risk assessments. Version 5.0 introduces a dedicated document processing pipeline and revolutionary conversational continuity, allowing the system to bridge context across image and text turns.
+# 🛡️ TriGuard AI
+
+**Multimodal Medical Triage Assistant (V5.0)**
+
+[![Version](https://img.shields.io/badge/version-5.0-blue.svg?style=for-the-badge)](https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant)
+[![Python](https://img.shields.io/badge/python-3.11-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://reactjs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Production_Ready-FF9900?style=for-the-badge)](#)
+
+_A production-grade multimodal medical triage system designed to provide rapid, safe, and intelligent health risk assessments._
+
+</div>
 
 ---
 
-## 🚀 What's New in Version 5.0 (V5)
+## 🚀 Introducing The V5 "Multimodal Bridge" Update
 
-The **V5 "Multimodal Bridge" Update** focus on pipeline maturity and user experience:
+Version 5.0 is our biggest leap forward, introducing a dedicated document processing pipeline and revolutionary conversational continuity. The system now effortlessly bridges context across images, documents, and text dialogs, representing a paradigm shift in medical conversational AI.
 
-- 📄 **Deep Document Pipeline**: A dedicated `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into the clinical text engine.
-- 🧠 **V5.1 Follow-up Context Patch**: Real-time context bridging. The AI now remembers prior X-ray, skin, or document findings during subsequent text-based questions (e.g., "Why am I getting this pain?" after an X-ray upload).
-- ⚡ **Performance 2.0**:
-  - **Single-Pass Vision**: Unified vision classification reduces document analysis latency by 50%.
-  - **O(1) Scale**: Safety guards now use constant-time history scanning regardless of conversation length.
-- 🛡️ **Granular Error Handling**: New `vision_error` and `ocr_completed` safety flags ensure structured, helpful fallbacks instead of blank outputs or hallucinations.
-- 🌍 **Native Multilingual**: Triage instructions are now embedded directly in the LLM prompt, eliminating sequential translation round-trips for non-English users.
+### 🌟 What's New in V5
+
+| Feature                            | Description                                                                                                                                                                                           | Impact                                   |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| 📄 **Deep Document Pipeline**      | A robust `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into our clinical text engine. | High precision medical record ingestion. |
+| 🧠 **Context Bridge (V5.1 Patch)** | Real-time context bridging. The AI remembers prior X-ray, skin, or document findings during subsequent text-based questions (e.g., "Why am I getting this pain?" after an X-ray upload).              | Seamless conversational flow.            |
+| ⚡ **Performance 2.0**             | Unified vision classification reduces document analysis latency by 50%.                                                                                                                               | Blazing fast responses.                  |
+| 🛡️ **O(1) Scale Safety**           | Guardrails now use constant-time history scanning regardless of conversation length.                                                                                                                  | Consistent low latency.                  |
+| 🚨 **Granular Error Handling**     | New `vision_error` and `ocr_completed` safety flags ensure structured, helpful fallbacks instead of blank outputs or hallucinations.                                                                  | 100% Deterministic fail-safes.           |
+| 🌍 **Native Multilingual**         | Triage instructions are embedded directly in the LLM prompt, eliminating sequential translation round-trips for non-English users.                                                                    | Inclusive, fast responses globally.      |
 
 ---
 
-## ✨ Key Features
+## ✨ Core Platform Features
 
 - 💬 **Multimodal AI Triage:** Intelligent analysis for Text, Voice, Body Images (Skin/Dermatology), and X-rays.
 - 🎙️ **Voice First UX:** Seamless Whisper STT and gTTS integration for hands-free medical input.
-- 🩻 **Radiology Screening:** Specialized pre-diagnosis nodes for chest X-ray analysis (Note: For screening only).
-- � **Deterministic Logic:** Orchestrated via **LangGraph**, ensuring clinical routing follows strict protocols rather than unpredictable LLM decisions.
+- 🩻 **Radiology Screening:** Specialized pre-diagnosis nodes for chest X-ray analysis _(Note: For screening only)_.
+- 🧩 **Deterministic Logic:** Orchestrated via **LangGraph**, ensuring clinical routing follows strict protocols rather than unpredictable LLM decisions.
 - 📊 **Risk Scoring Engine:** Real-time risk-level calculation (Low to Critical) with structured Red-Flag detection.
 - 🏛️ **Persistence with Privacy:** Opt-in session history (`use_history`) with MongoDB secondary persistence.
 - 🥗 **Integrated Nutrition:** Triage-aware dietary advice provided alongside medical assessments.
-- 🛡️ **Judge Validator:** An internal AI "Judge" validates every response for hallucinations, medical safety, and adherence to triage constraints before it reaches the user.
+- ⚖️ **Judge Validator:** An internal AI "Judge" validates every response for hallucinations, medical safety, and adherence to triage constraints before it reaches the user.
 
 ---
 
 ## 🏗️ Architecture Overview
+
+The V5 architecture utilizes LangGraph for a robust, state-driven execution environment:
+
+```mermaid
+graph TD
+    User([User Input]) --> Router{Router Node}
+    Router -->|Text| TextAnalysis[Clinical Text Engine]
+    Router -->|Document| OCR[OCR Pipeline]
+    Router -->|X-Ray| XRay[Radiology Screening]
+    Router -->|Body Image| Vision[Vision Classification]
+
+    OCR --> Synthesizer[Context Synthesizer]
+    XRay --> Synthesizer
+    Vision --> Synthesizer
+    TextAnalysis --> Synthesizer
+
+    Synthesizer --> Brain[Groq LLaMA 3.1 70B]
+    Brain --> Risk[Risk Scoring Engine]
+    Risk --> Judge{Safety Judge Validator}
+
+    Judge -->|Pass| Output([User Output])
+    Judge -->|Fail/Hallucination| Risk
+```
 
 The project follows a modular **Monorepo** structure:
 
@@ -52,28 +91,58 @@ TriGuard-AI/
 
 ## 🛠️ Technology Stack
 
-- **Reasoning/NLP:** Groq LLaMA 3.1 70B (Brain), LLaMA 3 8B (Classification).
-- **Vision/OCR:** Groq Vision-LLaVA, Tesseract/OCR-Engine.
-- **Orchestration:** LangGraph (Stateful Multi-actor Graph).
-- **Backend:** Python 3.11, FastAPI, Pydantic V2, Motor.
-- **Frontend:** React 19, Framer Motion (premium animations), Tailwind CSS 4.
-- **Search:** Tavily AI (Medical web search).
+| Category          | Technology                                                   |
+| :---------------- | :----------------------------------------------------------- |
+| **Reasoning/NLP** | Groq LLaMA 3.1 70B (Brain), LLaMA 3 8B (Classification)      |
+| **Vision/OCR**    | Groq Vision-LLaVA, Tesseract/OCR-Engine                      |
+| **Orchestration** | LangGraph (Stateful Multi-actor Graph)                       |
+| **Backend**       | Python 3.11, FastAPI, Pydantic V2, Motor                     |
+| **Frontend**      | React 19, Framer Motion (premium animations), Tailwind CSS 4 |
+| **Search/RAG**    | Tavily AI (Medical web search)                               |
 
 ---
 
 ## 🚀 Getting Started
 
-1. **Install uv**: `pip install uv`
-2. **Setup Backend**: `cd backend && uv sync`
-3. **Setup Frontend**: `cd frontend && npm install`
-4. **Environment**: Add `GROQ_API_KEY`, `TAVILY_API_KEY`, and `MONGO_URI` to `backend/.env`.
+Follow these steps to deploy TriGuard AI v5.0 locally.
+
+**1. Install Core Dependencies**
+
+```bash
+pip install uv
+```
+
+**2. Setup Backend Server**
+
+```bash
+cd backend
+uv sync
+```
+
+**3. Setup Frontend Client**
+
+```bash
+cd frontend
+npm install
+```
+
+**4. Environment Variables (`backend/.env`)**
+Create a `.env` file in the `backend/` directory with your API keys:
+
+```env
+GROQ_API_KEY="your_groq_api_key_here"
+TAVILY_API_KEY="your_tavily_api_key_here"
+MONGO_URI="mongodb://localhost:27017"
+```
 
 ---
 
-## ⚖️ Disclaimer
+## ⚖️ Legal Disclaimer
 
-_TriGuard AI is an AI assistant intended for informational purposes only. It is NOT a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition._
+> **IMPORTANT:** TriGuard AI is an AI assistant intended for informational purposes only. It is **NOT** a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. Do not disregard professional medical advice or delay in seeking it because of something you have read on this application.
 
 ---
 
-&copy; 2026 TriGuard AI Team | [Repository](https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant)
+<div align="center">
+&copy; 2026 TriGuard AI Team | <a href="https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant">Visit Repository</a>
+</div>

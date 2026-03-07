@@ -212,6 +212,24 @@ async def get_user(user_id: str) -> dict | None:
     return doc
 
 
+async def get_user_by_email(email: str) -> dict | None:
+    """Fetches a user profile by email."""
+    db = _get_db()
+    doc = await db.users.find_one({"email": email})
+    if doc:
+        doc["_id"] = str(doc["_id"])
+    return doc
+
+
+async def create_user(user_data: dict) -> str:
+    """Creates a new user profile document."""
+    db = _get_db()
+    user_data["created_at"] = datetime.now(timezone.utc)
+    user_data["updated_at"] = datetime.now(timezone.utc)
+    result = await db.users.insert_one(user_data)
+    return str(result.inserted_id)
+
+
 # ── History/Discovery operations ──────────────────────────────────────────────
 
 async def list_user_sessions(user_id: str, limit: int = 20) -> list:

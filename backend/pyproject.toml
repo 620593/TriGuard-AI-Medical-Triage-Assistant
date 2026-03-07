@@ -11,27 +11,26 @@ dependencies = [
     "groq>=0.10.0",
     "tavily-python>=0.3.0",
     "python-dotenv>=1.0.0",
-
     # ── V3: FastAPI backend ──────────────────────────────────────
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "python-multipart>=0.0.9",
-
     # ── V3: MongoDB (async) ──────────────────────────────────────
     "motor>=3.5.0",
     "pymongo>=4.8.0",
-
     # ── V3: Voice mode ───────────────────────────────────────────
     "gTTS>=2.5.0",
-
     # ── V3: OCR pipeline ─────────────────────────────────────────
     "Pillow>=10.3.0",
     "pytesseract>=0.3.10",
-
     # ── V3: X-ray analysis ───────────────────────────────────────
     "transformers>=4.53.0",
     "torch>=2.2.0",
-
     # ── V3: HTTP requests (for HuggingFace API) ─────────────────
     "requests>=2.31.0",
+    # ── V3: Gemini API (for nutrition_node) ─────────────────────
+    "google-generativeai>=0.8.0",
+    "pyjwt>=2.11.0",
+    "passlib[bcrypt]>=1.7.4",
+    "email-validator>=2.3.0",
 ]

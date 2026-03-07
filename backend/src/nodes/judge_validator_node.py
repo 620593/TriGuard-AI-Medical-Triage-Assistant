@@ -18,7 +18,6 @@ This node runs AFTER llm_brain_node. Routing handled by graph conditional edges.
 from backend.src.tools.groq_llama_tool import call_llama
 from backend.src.state.state import TriageState
 from backend.src.logging.logger import get_logger, log_event
-from backend.src.tools.mongodb_tool import insert_log
 
 import asyncio
 
@@ -88,16 +87,24 @@ async def judge_validator_node(state: TriageState) -> TriageState:
         log_event(logger, "judge_xray_passthrough", reason="xray_findings_auto_pass")
         return state
 
-    # Get the latest assistant response to validate
-    assistant_msgs = [m for m in messages if m.get("role") == "assistant"]
-    if not assistant_msgs:
-        state["judge_passed"] = True
-        state["judge_feedback"] = ""
-        state["validated_response"] = ""
-        state["needs_nutrition_image"] = False
-        return state
-
-    current_response = assistant_msgs[-1]["content"]
+    # Get the V6 structured llm_output to validate
+    # In V6, llm_brain writes clinical_summary to llm_output dict
+    llm_output = state.get("llm_output", {})
+    if not llm_output:
+        # Fallback: use last assistant message (xray/vision fast-exit paths)
+        assistant_msgs = [m for m in messages if m.get("role") == "assistant"]
+        if not assistant_msgs:
+            state["judge_passed"] = True
+            state["judge_feedback"] = ""
+            state["validated_response"] = ""
+            state["trigger_nutrition_node"] = False
+            return state
+        current_response = assistant_msgs[-1]["content"]
+    else:
+        current_response = llm_output.get("clinical_summary", "")
+        if not current_response and messages:
+            assistant_msgs = [m for m in messages if m.get("role") == "assistant"]
+            current_response = assistant_msgs[-1]["content"] if assistant_msgs else ""
 
     # Sanitize inputs before embedding in judge prompt (prompt injection mitigation)
     safe_response = _sanitize_for_prompt(current_response, max_length=800)

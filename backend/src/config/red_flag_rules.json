@@ -1,0 +1,141 @@
+{
+  "version": "6.0",
+  "description": "Config-driven red flag rules for TriGuard AI V6. Each rule maps symptom keywords to urgency and risk escalation. Rules are evaluated deterministically — no LLM involvement.",
+  "urgency_map": {
+    "critical": [
+      "respiratory arrest",
+      "cardiac arrest",
+      "unresponsive",
+      "no pulse",
+      "not breathing",
+      "unconscious"
+    ],
+    "emergency": [
+      "chest pain",
+      "cannot breathe",
+      "difficulty breathing",
+      "shortness of breath",
+      "stroke",
+      "paralysis",
+      "severe bleeding",
+      "loss of consciousness",
+      "seizure",
+      "anaphylaxis",
+      "allergic reaction",
+      "severe allergic"
+    ],
+    "urgent": [
+      "high fever",
+      "fever above 103",
+      "fever above 40",
+      "severe headache",
+      "sudden vision loss",
+      "sudden hearing loss",
+      "severe abdominal pain",
+      "blood in urine",
+      "blood in stool",
+      "coughing blood",
+      "vomiting blood",
+      "slurred speech",
+      "confusion",
+      "disorientation",
+      "swollen face",
+      "swollen throat",
+      "rash spreading",
+      "limb weakness"
+    ],
+    "routine": [
+      "mild fever",
+      "sore throat",
+      "cough",
+      "cold",
+      "runny nose",
+      "mild headache",
+      "minor rash",
+      "fatigue",
+      "nausea",
+      "diarrhea",
+      "indigestion",
+      "muscle ache"
+    ]
+  },
+  "escalation_rules": [
+    {
+      "id": "RF001",
+      "description": "Critical airway / cardiac event — escalate to highest severity",
+      "match_any": [
+        "respiratory arrest",
+        "cardiac arrest",
+        "unresponsive",
+        "no pulse",
+        "not breathing",
+        "cardiac"
+      ],
+      "set_risk_level": "critical",
+      "set_urgency": "critical",
+      "red_flag_triggered": true
+    },
+    {
+      "id": "RF002",
+      "description": "Emergency life-threatening symptoms",
+      "match_any": [
+        "chest pain",
+        "cannot breathe",
+        "difficulty breathing",
+        "shortness of breath",
+        "stroke",
+        "paralysis",
+        "severe bleeding",
+        "loss of consciousness",
+        "seizure",
+        "anaphylaxis",
+        "severe allergic"
+      ],
+      "set_risk_level": "high",
+      "set_urgency": "emergency",
+      "red_flag_triggered": true
+    },
+    {
+      "id": "RF003",
+      "description": "Urgent — requires same-day medical evaluation",
+      "match_any": [
+        "high fever",
+        "fever above 103",
+        "fever above 40",
+        "severe headache",
+        "sudden vision loss",
+        "sudden hearing loss",
+        "severe abdominal pain",
+        "blood in urine",
+        "blood in stool",
+        "coughing blood",
+        "vomiting blood",
+        "slurred speech",
+        "confusion",
+        "swollen throat"
+      ],
+      "set_risk_level": "moderate",
+      "set_urgency": "urgent",
+      "red_flag_triggered": true,
+      "only_if_risk_below": "high"
+    },
+    {
+      "id": "RF004",
+      "description": "Mental health crisis — self-harm or suicidal ideation",
+      "match_any": [
+        "suicidal",
+        "suicide",
+        "kill myself",
+        "end my life",
+        "want to die",
+        "self-harm",
+        "cutting myself",
+        "no reason to live",
+        "hopeless and alone"
+      ],
+      "set_risk_level": "high",
+      "set_urgency": "emergency",
+      "red_flag_triggered": true
+    }
+  ]
+}

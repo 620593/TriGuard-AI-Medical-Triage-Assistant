@@ -7,6 +7,14 @@ const client = axios.create({
   },
 });
 
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 client.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -14,13 +22,27 @@ client.interceptors.response.use(
       "[API Error] intercepted:",
       error.response?.data || error.message,
     );
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
     return Promise.reject(error);
   },
 );
 
+export const authAPI = {
+  login: (data) => client.post("/auth/login", data),
+  register: (data) => client.post("/auth/register", data),
+};
+
 export const triageAPI = {
   // Text triage
-  triage: (data) => client.post("/triage", data),
+  triage: (data) => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user?.user_id) data.user_id = user.user_id;
+    return client.post("/triage", data);
+  },
 
   // Voice triage
   voice: (formData) =>
@@ -44,12 +66,9 @@ export const triageAPI = {
   getHealth: () => client.get("/health"),
 
   // History & Reports
-  getSessions: (userId = "anonymous") =>
-    client.get("/sessions", { headers: { "X-User-Id": userId } }),
-  getReports: (userId = "anonymous") =>
-    client.get("/reports", { headers: { "X-User-Id": userId } }),
-  deleteReport: (reportId, userId = "anonymous") =>
-    client.delete(`/reports/${reportId}`, { headers: { "X-User-Id": userId } }),
+  getSessions: () => client.get("/sessions"),
+  getReports: () => client.get("/reports"),
+  deleteReport: (reportId) => client.delete(`/reports/${reportId}`),
 
   // Static Resource Helpers
   getStaticAudioUrl: (filename) =>

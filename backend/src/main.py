@@ -89,6 +89,13 @@ async def lifespan(app: FastAPI):
 
     yield  # Server runs here
 
+    # Drain in-flight nutrition image generation tasks before shutdown
+    try:
+        from backend.src.nodes.async_nutrition_image_node import drain_pending_image_tasks
+        await drain_pending_image_tasks()
+    except Exception as exc:
+        logger.warning(f"Could not drain image tasks at shutdown: {exc}")
+
     log_event(logger, "app_shutdown")
 
 
@@ -112,9 +119,13 @@ app = FastAPI(
 async def _global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch all unhandled exceptions and return a safe JSON error."""
     logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
+    import traceback
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error. Please contact support if the issue persists."},
+        content={
+            "detail": f"Internal server error: {exc}",
+            "traceback": traceback.format_exc()
+        },
     )
 
 
@@ -129,6 +140,9 @@ app.add_middleware(
 
 # ── Register API routes ───────────────────────────────────────────────────────
 from backend.src.api.routes import router  # noqa: E402
+from backend.src.api.auth import router as auth_router  # noqa: E402
+
+app.include_router(auth_router, prefix="/api/v3/auth", tags=["Auth"])
 app.include_router(router, prefix="/api/v3", tags=["Triage"])
 
 # ── Static file serving (dirs already created above) ─────────────────────────

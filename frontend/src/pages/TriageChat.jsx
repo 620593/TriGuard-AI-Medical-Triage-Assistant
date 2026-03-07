@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,10 +17,12 @@ import {
   Image,
   ScanSearch,
   FileScan,
+  RefreshCw,
 } from "lucide-react";
 import { triageAPI } from "../api/client";
 import RiskBadge from "../components/RiskBadge";
 import VoiceToggle from "../components/VoiceToggle";
+import VoiceInterface from "../components/VoiceInterface";
 import TriageResponseCard from "../components/TriageResponseCard";
 
 /** Sanitize once at creation time and convert newlines to <br/> */
@@ -43,14 +45,49 @@ const TriageChat = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false); // true = fullscreen VoiceInterface
   const [sessionID, setSessionID] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
   // imageTypeModal holds the pending File waiting for the user to select its type
   const [imageTypeModal, setImageTypeModal] = useState(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-
   const chatEndRef = useRef(null);
+
+  // ── Voice mode helpers ─────────────────────────────────────────────────────
+  /** Open fullscreen voice interface */
+  const openVoiceMode = () => {
+    // Stop any in-progress inline recording before switching modes
+    if (isVoiceActive) stopRecording();
+    setVoiceMode(true);
+  };
+
+  /** Called when VoiceInterface returns a result — merge into chat history */
+  const handleVoiceResult = (result) => {
+    if (result.session_id) setSessionID(result.session_id);
+    setMessages((prev) =>
+      [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: `🎙️ ${result.transcription}`,
+          html: sanitize(`🎙️ ${result.transcription}`),
+          type: "voice_input",
+        },
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: result.response,
+          html: sanitize(result.response),
+          risk: result.risk_level,
+          type: "voice",
+          // data.audio_url is already the full URL from backend — use directly
+          audioUrl: result.audio_url || null,
+        },
+      ].slice(-50),
+    );
+  };
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -147,7 +184,9 @@ const TriageChat = () => {
             html: sanitize(data.response),
             risk: data.risk_level,
             type: "voice",
-            audioUrl: triageAPI.getStaticAudioUrl(data.audio_url),
+            // data.audio_url is already a full URL (e.g. http://localhost:8000/static/audio/triage_abc.mp3)
+            // Do NOT pass it through getStaticAudioUrl() — that would double-wrap the path.
+            audioUrl: data.audio_url || null,
           },
         ];
         return newHistory.slice(-50); // Keep max 50 trailing messages in memory
@@ -188,6 +227,7 @@ const TriageChat = () => {
 
     try {
       const response = await triageAPI.triage({
+        // Always include session_id (null on first message starts a new session)
         session_id: sessionID,
         message: input,
       });
@@ -195,6 +235,7 @@ const TriageChat = () => {
       const data = response?.data;
       if (!data) throw new Error("Empty response");
 
+      // Store session_id from first response — send it on every subsequent turn
       if (data.session_id) setSessionID(data.session_id);
 
       // Build the nutrition image URL from filename (if HF generated one)
@@ -418,17 +459,58 @@ const TriageChat = () => {
   return (
     <>
       <div className="max-w-4xl mx-auto h-[calc(100vh-120px)] flex flex-col p-4">
-        {/* Header Info */}
+        {/* Header */}
         <div className="flex justify-between items-center mb-4 px-2">
           <div>
             <h1 className="text-xl font-bold text-white drop-shadow-md italic">
               Medical Triage Session
             </h1>
             <p className="text-xs text-slate-300 font-light">
-              Encrypted & Anonymous AI Consultation
+              Encrypted &amp; Anonymous AI Consultation
             </p>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex items-center gap-2">
+            {/* Session Active badge */}
+            <AnimatePresence>
+              {sessionID && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-semibold text-emerald-300 tracking-wide">
+                    Session ···{sessionID.slice(-8)}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* New Chat button */}
+            <button
+              onClick={() => {
+                setSessionID(null);
+                setMessages([
+                  {
+                    id: "initial-welcome",
+                    role: "assistant",
+                    content:
+                      "Hello! I am TriGuard AI. How are you feeling today? You can describe your symptoms, upload a document, or use voice mode.",
+                    html: sanitize(
+                      "Hello! I am TriGuard AI. How are you feeling today? You can describe your symptoms, upload a document, or use voice mode.",
+                    ),
+                    type: "text",
+                  },
+                ]);
+              }}
+              className="skeuo-btn px-3 py-1 !rounded-full text-xs flex items-center gap-1 hover:bg-teal-500/10 transition-colors"
+              title="Start a new chat session"
+            >
+              <RefreshCw size={11} />
+              <span>New Chat</span>
+            </button>
+
             <button className="skeuo-btn px-3 py-1 !rounded-full text-xs flex items-center space-x-1">
               <Globe size={14} /> <span>English</span>
             </button>
@@ -562,12 +644,7 @@ const TriageChat = () => {
             <div
               className={`${isLoading ? "opacity-50 pointer-events-none" : ""}`}
             >
-              <VoiceToggle
-                isActive={isVoiceActive}
-                onClick={() =>
-                  isVoiceActive ? stopRecording() : startRecording()
-                }
-              />
+              <VoiceToggle isActive={voiceMode} onClick={openVoiceMode} />
             </div>
 
             <div className="flex-1 flex flex-col gap-2">
@@ -671,6 +748,22 @@ const TriageChat = () => {
         onSelect={handleModalTypeSelect}
         onCancel={() => setImageTypeModal(null)}
       />
+
+      {/* Fullscreen Voice Interface — renders over everything when voiceMode=true */}
+      <AnimatePresence>
+        {voiceMode && (
+          <VoiceInterface
+            key="voice-interface"
+            onClose={() => setVoiceMode(false)}
+            onResult={handleVoiceResult}
+            sessionId={sessionID}
+            userId={
+              JSON.parse(localStorage.getItem("user") || "{}")?.user_id || null
+            }
+            token={localStorage.getItem("token") || null}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };

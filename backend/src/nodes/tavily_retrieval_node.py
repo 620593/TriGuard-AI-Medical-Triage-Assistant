@@ -31,6 +31,23 @@ async def tavily_retrieval_node(state: TriageState) -> TriageState:
 
     with LatencyTracker("tavily_search") as tracker:
         results = await asyncio.to_thread(search_medical_info, symptoms)
+        
+    APPROVED_OTC_KEYWORDS = [
+        "fever", "pain", "cold", "flu", "cough", "acidity", "motions", 
+        "loose", "nausea", "headache", "allergies", "vitamins", "vitamin"
+    ]
+
+    if state.get("medication_requested"):
+        uncovered_symptoms = []
+        for sym in symptoms:
+            if not any(kw in sym.lower() for kw in APPROVED_OTC_KEYWORDS):
+                uncovered_symptoms.append(sym)
+                
+        if uncovered_symptoms:
+            otc_queries = [f"OTC medicine for {sym} without prescription India" for sym in uncovered_symptoms]
+            with LatencyTracker("tavily_otc_search") as otc_tracker:
+                otc_results = await asyncio.to_thread(search_medical_info, otc_queries)
+            results.extend(otc_results)
 
     state["retrieved_info"] = results
 

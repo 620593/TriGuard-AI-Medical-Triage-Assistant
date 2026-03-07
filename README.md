@@ -2,9 +2,9 @@
 
 # 🛡️ TriGuard AI
 
-**Multimodal Medical Triage Assistant (V5.0)**
+**Multimodal Medical Triage Assistant (V6.0)**
 
-[![Version](https://img.shields.io/badge/version-5.0-blue.svg?style=for-the-badge)](https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant)
+[![Version](https://img.shields.io/badge/version-6.0-blue.svg?style=for-the-badge)](https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://reactjs.org/)
@@ -17,20 +17,20 @@ _A production-grade multimodal medical triage system designed to provide rapid, 
 
 ---
 
-## 🚀 Introducing The V5 "Multimodal Bridge" Update
+## 🚀 Introducing The V6 "Intelligent Continuity" Update
 
-Version 5.0 is our biggest leap forward, introducing a dedicated document processing pipeline and revolutionary conversational continuity. The system now effortlessly bridges context across images, documents, and text dialogs, representing a paradigm shift in medical conversational AI.
+Version 6.0 introduces a massive structural leap, finalizing the architecture with **Google OAuth**, **persistent cross-session memory**, **OTC Medication suggestions**, and a fully redesigned **React 19 + Framer Motion UI**. The system now maintains complete conversational continuity across triage sessions!
 
-### 🌟 What's New in V5
+### 🌟 What's New in V6
 
-| Feature                            | Description                                                                                                                                                                                           | Impact                                   |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| 📄 **Deep Document Pipeline**      | A robust `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into our clinical text engine. | High precision medical record ingestion. |
-| 🧠 **Context Bridge (V5.1 Patch)** | Real-time context bridging. The AI remembers prior X-ray, skin, or document findings during subsequent text-based questions (e.g., "Why am I getting this pain?" after an X-ray upload).              | Seamless conversational flow.            |
-| ⚡ **Performance 2.0**             | Unified vision classification reduces document analysis latency by 50%.                                                                                                                               | Blazing fast responses.                  |
-| 🛡️ **O(1) Scale Safety**           | Guardrails now use constant-time history scanning regardless of conversation length.                                                                                                                  | Consistent low latency.                  |
-| 🚨 **Granular Error Handling**     | New `vision_error` and `ocr_completed` safety flags ensure structured, helpful fallbacks instead of blank outputs or hallucinations.                                                                  | 100% Deterministic fail-safes.           |
-| 🌍 **Native Multilingual**         | Triage instructions are embedded directly in the LLM prompt, eliminating sequential translation round-trips for non-English users.                                                                    | Inclusive, fast responses globally.      |
+| Feature                             | Description                                                                                                                                                                                           | Impact                                   |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| �️ **Authentication 2.0**            | Secure login system featuring **Google OAuth** integration, JWT-based protected routes, and Axios 401 interceptors.                                                                                   | Seamless & secure onboarding.            |
+| 🧠 **In-Session Memory**            | True conversational flow! The AI remembers previous turns inside the same session so you don't have to repeat your symptoms repeatedly. Uses MongoDB session ID mapping.                              | Fluid conversational triage.             |
+| 💊 **OTC & Nutrition Integrations** | Now safely suggests over-the-counter medications and dietary nutrition tips when triggered by the triage logic and verified safely.                                                                   | Actionable holistic advice.              |
+| 🎨 **UI Redesign**                  | Breathtaking Frontend redesign utilizing React 19, Tailwind CSS 4, and Framer Motion micro-interactions. Offers split-screen glassmorphic layouts.                                                    | Premium visual experience.               |
+| � **Deep Document Pipeline**        | A robust `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into our clinical text engine. | High precision medical record ingestion. |
+| 🌍 **Native Multilingual**          | Triage instructions are embedded directly in the LLM prompt, simplifying complex jargon locally for diverse users.                                                                                    | Inclusive, fast responses globally.      |
 
 ---
 
@@ -96,7 +96,7 @@ TriGuard-AI/
 | **Reasoning/NLP** | Groq LLaMA 3.1 70B (Brain), LLaMA 3 8B (Classification)      |
 | **Vision/OCR**    | Groq Vision-LLaVA, Tesseract/OCR-Engine                      |
 | **Orchestration** | LangGraph (Stateful Multi-actor Graph)                       |
-| **Backend**       | Python 3.11, FastAPI, Pydantic V2, Motor                     |
+| **Backend**       | Python 3.11, FastAPI, Pydantic V2, Motor, bcrypt             |
 | **Frontend**      | React 19, Framer Motion (premium animations), Tailwind CSS 4 |
 | **Search/RAG**    | Tavily AI (Medical web search)                               |
 

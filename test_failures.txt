@@ -1,0 +1,1783 @@
+﻿============================= test session starts =============================
+collecting ... collected 9 items
+
+backend/tests/test_graph_integration.py::test_text_pipeline_full_flow FAILED [ 11%]
+backend/tests/test_graph_integration.py::test_vision_pipeline_full_flow FAILED [ 22%]
+backend/tests/test_llm_brain_node.py::test_standard_response_appended_to_messages FAILED [ 33%]
+backend/tests/test_llm_brain_node.py::test_ask_followup_skips_response_generation PASSED [ 44%]
+backend/tests/test_llm_brain_node.py::test_priority_interrupt_generates_emergency_alert PASSED [ 55%]
+backend/tests/test_llm_brain_node.py::test_mental_health_crisis_generates_crisis_response PASSED [ 66%]
+backend/tests/test_llm_brain_node.py::test_vision_findings_triggers_vision_path PASSED [ 77%]
+backend/tests/test_llm_brain_node.py::test_low_confidence_vision_triggers_quality_warning PASSED [ 88%]
+backend/tests/test_llm_brain_node.py::test_nutrition_appended_to_response PASSED [100%]
+
+================================== FAILURES ===================================
+________________________ test_text_pipeline_full_flow _________________________
+
+mock_create = <AsyncMock name='create_session' id='1901331301200'>
+mock_sym_llama = <MagicMock name='call_llama' id='1901352588752'>
+mock_fup_llama = <MagicMock name='call_llama' id='1901353861008'>
+mock_brain_llama = <MagicMock name='call_llama' id='1901353884048'>
+mock_judge_llama = <MagicMock name='call_llama' id='1901353890832'>
+mock_search = <MagicMock name='search_medical_info' id='1901353914320'>
+mock_risk = <MagicMock name='evaluate_risk' id='1901354175888'>
+mock_mh = <MagicMock name='detect_mental_health_crisis' id='1901354187152'>
+mock_nutrition = <MagicMock name='generate_nutrition_advice' id='1901354228176'>
+mock_update = <AsyncMock name='update_session' id='1901354236432'>
+mock_report = <AsyncMock name='save_report' id='1901354244752'>
+mock_log = <AsyncMock name='insert_log' id='1901354251024'>
+
+    @patch("backend.src.nodes.save_session_node.insert_log", new_callable=AsyncMock)
+    @patch("backend.src.nodes.save_session_node.save_report", new_callable=AsyncMock)
+    @patch("backend.src.nodes.save_session_node.update_session", new_callable=AsyncMock)
+    @patch("backend.src.nodes.nutrition_node.generate_nutrition_advice",
+           return_value={"advice": "Drink water", "image_url": ""})
+    @patch("backend.src.nodes.mental_health_node.detect_mental_health_crisis", return_value=False)
+    @patch("backend.src.nodes.risk_evaluation_node.evaluate_risk",
+           return_value={"risk_score": 3.0, "risk_level": "low", "confidence": 0.9})
+    @patch("backend.src.nodes.tavily_retrieval_node.search_medical_info",
+           return_value=["Headache may be tension-type."])
+    @patch("backend.src.nodes.judge_validator_node.call_llama", return_value="PASS")
+    @patch("backend.src.nodes.llm_brain_node.call_llama",
+           return_value="\U0001fa7a Summary: Mild headache with fever.")
+    @patch("backend.src.nodes.followup_node.call_llama", return_value="")
+    @patch("backend.src.nodes.symptom_extraction_node.call_llama",
+           side_effect=["en", "headache, fever"])
+    @patch("backend.src.nodes.load_session_node.create_session", new_callable=AsyncMock,
+           return_value="new-session-abc")
+    def test_text_pipeline_full_flow(
+        mock_create, mock_sym_llama, mock_fup_llama, mock_brain_llama,
+        mock_judge_llama, mock_search, mock_risk, mock_mh, mock_nutrition,
+        mock_update, mock_report, mock_log
+    ):
+        """Full text pipeline: new session \u2192 symptoms \u2192 followup \u2192 retrieval \u2192 risk \u2192 mental health \u2192 LLM \u2192 judge \u2192 nutrition \u2192 save."""
+        from backend.src.graph.builder import build_triage_graph
+    
+        graph = build_triage_graph()
+        state = _init_state()
+>       result = run(graph.ainvoke(state))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_graph_integration.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+coro = <coroutine object Pregel.ainvoke at 0x000001BAD8890860>
+
+    def run(coro):
+>       return asyncio.get_event_loop().run_until_complete(coro)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_graph_integration.py:16: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <ProactorEventLoop running=False closed=False debug=False>
+future = <Task finished name='Task-1' coro=<Pregel.ainvoke() done, defined at E:\My Projects\TriGaurd Ai-Voice Enabled intellig...nt\.venv\Lib\site-packages\langgraph\pregel\main.py:3114> exception=NameError("name 'nutrition_image' is not defined")>
+
+    def run_until_complete(self, future):
+        """Run until the Future is done.
+    
+        If the argument is a coroutine, it is wrapped in a Task.
+    
+        WARNING: It would be disastrous to call run_until_complete()
+        with the same coroutine twice -- it would wrap it in two
+        different Tasks and that can't be good.
+    
+        Return the Future's result, or raise its exception.
+        """
+        self._check_closed()
+        self._check_running()
+    
+        new_task = not futures.isfuture(future)
+        future = tasks.ensure_future(future, loop=self)
+        if new_task:
+            # An exception is raised if the future didn't complete, so there
+            # is no need to log the "destroy pending task" message
+            future._log_destroy_pending = False
+    
+        future.add_done_callback(_run_until_complete_cb)
+        try:
+            self.run_forever()
+        except:
+            if new_task and future.done() and not future.cancelled():
+                # The coroutine raised a BaseException. Consume the exception
+                # to not log a warning, the caller doesn't have access to the
+                # local task.
+                future.exception()
+            raise
+        finally:
+            future.remove_done_callback(_run_until_complete_cb)
+        if not future.done():
+            raise RuntimeError('Event loop stopped before Future completed.')
+    
+>       return future.result()
+               ^^^^^^^^^^^^^^^
+
+C:\Users\lenovo\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\asyncio\base_events.py:654: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <langgraph.graph.state.CompiledStateGraph object at 0x000001BAD617A210>
+input = {'audio_url': '', 'followup_count': 0, 'image_input': None, 'input_mode': 'text', ...}
+config = None, context = None, stream_mode = 'values', print_mode = ()
+output_keys = ['messages', 'original_input', 'intent', 'image_type_hint', 'symptoms', 'followup_count', ...]
+interrupt_before = None, interrupt_after = None, durability = None, kwargs = {}
+
+    async def ainvoke(
+        self,
+        input: InputT | Command | None,
+        config: RunnableConfig | None = None,
+        *,
+        context: ContextT | None = None,
+        stream_mode: StreamMode = "values",
+        print_mode: StreamMode | Sequence[StreamMode] = (),
+        output_keys: str | Sequence[str] | None = None,
+        interrupt_before: All | Sequence[str] | None = None,
+        interrupt_after: All | Sequence[str] | None = None,
+        durability: Durability | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any] | Any:
+        """Asynchronously run the graph with a single input and config.
+    
+        Args:
+            input: The input data for the graph. It can be a dictionary or any other type.
+            config: The configuration for the graph run.
+            context: The static context to use for the run.
+                !!! version-added "Added in version 0.6.0"
+            stream_mode: The stream mode for the graph run.
+            print_mode: Accepts the same values as `stream_mode`, but only prints the output to the console, for debugging purposes.
+    
+                Does not affect the output of the graph in any way.
+            output_keys: The output keys to retrieve from the graph run.
+            interrupt_before: The nodes to interrupt the graph run before.
+            interrupt_after: The nodes to interrupt the graph run after.
+            durability: The durability mode for the graph execution, defaults to `"async"`.
+    
+                Options are:
+    
+                - `"sync"`: Changes are persisted synchronously before the next step starts.
+                - `"async"`: Changes are persisted asynchronously while the next step executes.
+                - `"exit"`: Changes are persisted only when the graph exits.
+            **kwargs: Additional keyword arguments to pass to the graph run.
+    
+        Returns:
+            The output of the graph run. If `stream_mode` is `"values"`, it returns the latest output.
+            If `stream_mode` is not `"values"`, it returns a list of output chunks.
+        """
+        output_keys = output_keys if output_keys is not None else self.output_channels
+    
+        latest: dict[str, Any] | Any = None
+        chunks: list[dict[str, Any] | Any] = []
+        interrupts: list[Interrupt] = []
+    
+>       async for chunk in self.astream(
+            input,
+            config,
+            context=context,
+            stream_mode=["updates", "values"]
+            if stream_mode == "values"
+            else stream_mode,
+            print_mode=print_mode,
+            output_keys=output_keys,
+            interrupt_before=interrupt_before,
+            interrupt_after=interrupt_after,
+            durability=durability,
+            **kwargs,
+        ):
+
+.venv\Lib\site-packages\langgraph\pregel\main.py:3161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <langgraph.graph.state.CompiledStateGraph object at 0x000001BAD617A210>
+input = {'audio_url': '', 'followup_count': 0, 'image_input': None, 'input_mode': 'text', ...}
+config = {'callbacks': None, 'configurable': {'__pregel_runtime': Runtime(context=None, store=None, stream_writer=<function Pre...locals>.stream_writer at 0x000001BAD896B9C0>, previous=None)}, 'metadata': ChainMap({}), 'recursion_limit': 10000, ...}
+context = None, stream_mode = ['updates', 'values'], print_mode = ()
+output_keys = ['messages', 'original_input', 'intent', 'image_type_hint', 'symptoms', 'followup_count', ...]
+interrupt_before = None, interrupt_after = None, durability = None
+subgraphs = False
+
+    async def astream(
+        self,
+        input: InputT | Command | None,
+        config: RunnableConfig | None = None,
+        *,
+        context: ContextT | None = None,
+        stream_mode: StreamMode | Sequence[StreamMode] | None = None,
+        print_mode: StreamMode | Sequence[StreamMode] = (),
+        output_keys: str | Sequence[str] | None = None,
+        interrupt_before: All | Sequence[str] | None = None,
+        interrupt_after: All | Sequence[str] | None = None,
+        durability: Durability | None = None,
+        subgraphs: bool = False,
+        debug: bool | None = None,
+        **kwargs: Unpack[DeprecatedKwargs],
+    ) -> AsyncIterator[dict[str, Any] | Any]:
+        """Asynchronously stream graph steps for a single input.
+    
+        Args:
+            input: The input to the graph.
+            config: The configuration to use for the run.
+            context: The static context to use for the run.
+                !!! version-added "Added in version 0.6.0"
+            stream_mode: The mode to stream output, defaults to `self.stream_mode`.
+    
+                Options are:
+    
+                - `"values"`: Emit all values in the state after each step, including interrupts.
+                    When used with functional API, values are emitted once at the end of the workflow.
+                - `"updates"`: Emit only the node or task names and updates returned by the nodes or tasks after each step.
+                    If multiple updates are made in the same step (e.g. multiple nodes are run) then those updates are emitted separately.
+                - `"custom"`: Emit custom data from inside nodes or tasks using `StreamWriter`.
+                - `"messages"`: Emit LLM messages token-by-token together with metadata for any LLM invocations inside nodes or tasks.
+                    - Will be emitted as 2-tuples `(LLM token, metadata)`.
+                - `"checkpoints"`: Emit an event when a checkpoint is created, in the same format as returned by `get_state()`.
+                - `"tasks"`: Emit events when tasks start and finish, including their results and errors.
+                - `"debug"`: Emit debug events with as much information as possible for each step.
+    
+                You can pass a list as the `stream_mode` parameter to stream multiple modes at once.
+                The streamed outputs will be tuples of `(mode, data)`.
+    
+                See [LangGraph streaming guide](https://docs.langchain.com/oss/python/langgraph/streaming) for more details.
+            print_mode: Accepts the same values as `stream_mode`, but only prints the output to the console, for debugging purposes.
+    
+                Does not affect the output of the graph in any way.
+            output_keys: The keys to stream, defaults to all non-context channels.
+            interrupt_before: Nodes to interrupt before, defaults to all nodes in the graph.
+            interrupt_after: Nodes to interrupt after, defaults to all nodes in the graph.
+            durability: The durability mode for the graph execution, defaults to `"async"`.
+    
+                Options are:
+    
+                - `"sync"`: Changes are persisted synchronously before the next step starts.
+                - `"async"`: Changes are persisted asynchronously while the next step executes.
+                - `"exit"`: Changes are persisted only when the graph exits.
+            subgraphs: Whether to stream events from inside subgraphs, defaults to `False`.
+    
+                If `True`, the events will be emitted as tuples `(namespace, data)`,
+                or `(namespace, mode, data)` if `stream_mode` is a list,
+                where `namespace` is a tuple with the path to the node where a subgraph is invoked,
+                e.g. `("parent_node:<task_id>", "child_node:<task_id>")`.
+    
+                See [LangGraph streaming guide](https://docs.langchain.com/oss/python/langgraph/streaming) for more details.
+    
+        Yields:
+            The output of each step in the graph. The output shape depends on the `stream_mode`.
+        """
+        if (checkpoint_during := kwargs.get("checkpoint_during")) is not None:
+            warnings.warn(
+                "`checkpoint_during` is deprecated and will be removed. Please use `durability` instead.",
+                category=LangGraphDeprecatedSinceV10,
+                stacklevel=2,
+            )
+            if durability is not None:
+                raise ValueError(
+                    "Cannot use both `checkpoint_during` and `durability` parameters. Please use `durability` instead."
+                )
+            durability = "async" if checkpoint_during else "exit"
+    
+        if stream_mode is None:
+            # if being called as a node in another graph, default to values mode
+            # but don't overwrite stream_mode arg if provided
+            stream_mode = (
+                "values"
+                if config is not None and CONFIG_KEY_TASK_ID in config.get(CONF, {})
+                else self.stream_mode
+            )
+        if debug or self.debug:
+            print_mode = ["updates", "values"]
+    
+        stream = AsyncQueue()
+        aioloop = asyncio.get_running_loop()
+        stream_put = cast(
+            Callable[[StreamChunk], None],
+            partial(aioloop.call_soon_threadsafe, stream.put_nowait),
+        )
+    
+        config = ensure_config(self.config, config)
+        callback_manager = get_async_callback_manager_for_config(config)
+        run_manager = await callback_manager.on_chain_start(
+            None,
+            input,
+            name=config.get("run_name", self.get_name()),
+            run_id=config.get("run_id"),
+        )
+        # if running from astream_log() run each proc with streaming
+        do_stream = (
+            next(
+                (
+                    True
+                    for h in run_manager.handlers
+                    if isinstance(h, _StreamingCallbackHandler)
+                    and not isinstance(h, StreamMessagesHandler)
+                ),
+                False,
+            )
+            if _StreamingCallbackHandler is not None
+            else False
+        )
+        try:
+            # assign defaults
+            (
+                stream_modes,
+                output_keys,
+                interrupt_before_,
+                interrupt_after_,
+                checkpointer,
+                store,
+                cache,
+                durability_,
+            ) = self._defaults(
+                config,
+                stream_mode=stream_mode,
+                print_mode=print_mode,
+                output_keys=output_keys,
+                interrupt_before=interrupt_before,
+                interrupt_after=interrupt_after,
+                durability=durability,
+            )
+            if checkpointer is None and durability is not None:
+                warnings.warn(
+                    "`durability` has no effect when no checkpointer is present.",
+                )
+            # set up subgraph checkpointing
+            if self.checkpointer is True:
+                ns = cast(str, config[CONF][CONFIG_KEY_CHECKPOINT_NS])
+                config[CONF][CONFIG_KEY_CHECKPOINT_NS] = recast_checkpoint_ns(ns)
+            # set up messages stream mode
+            if "messages" in stream_modes:
+                # namespace can be None in a root level graph?
+                ns_ = cast(str | None, config[CONF].get(CONFIG_KEY_CHECKPOINT_NS))
+                run_manager.inheritable_handlers.append(
+                    StreamMessagesHandler(
+                        stream_put,
+                        subgraphs,
+                        parent_ns=tuple(ns_.split(NS_SEP)) if ns_ else None,
+                    )
+                )
+    
+            # set up custom stream mode
+            def stream_writer(c: Any) -> None:
+                aioloop.call_soon_threadsafe(
+                    stream.put_nowait,
+                    (
+                        tuple(
+                            get_config()[CONF][CONFIG_KEY_CHECKPOINT_NS].split(NS_SEP)[
+                                :-1
+                            ]
+                        ),
+                        "custom",
+                        c,
+                    ),
+                )
+    
+            if "custom" in stream_modes:
+    
+                def stream_writer(c: Any) -> None:
+                    aioloop.call_soon_threadsafe(
+                        stream.put_nowait,
+                        (
+                            tuple(
+                                get_config()[CONF][CONFIG_KEY_CHECKPOINT_NS].split(
+                                    NS_SEP
+                                )[:-1]
+                            ),
+                            "custom",
+                            c,
+                        ),
+                    )
+            elif CONFIG_KEY_STREAM in config[CONF]:
+                stream_writer = config[CONF][CONFIG_KEY_RUNTIME].stream_writer
+            else:
+    
+                def stream_writer(c: Any) -> None:
+                    pass
+    
+            # set durability mode for subgraphs
+            if durability is not None:
+                config[CONF][CONFIG_KEY_DURABILITY] = durability_
+    
+            runtime = Runtime(
+                context=_coerce_context(self.context_schema, context),
+                store=store,
+                stream_writer=stream_writer,
+                previous=None,
+            )
+            parent_runtime = config[CONF].get(CONFIG_KEY_RUNTIME, DEFAULT_RUNTIME)
+            runtime = parent_runtime.merge(runtime)
+            config[CONF][CONFIG_KEY_RUNTIME] = runtime
+    
+            async with AsyncPregelLoop(
+                input,
+                stream=StreamProtocol(stream.put_nowait, stream_modes),
+                config=config,
+                store=store,
+                cache=cache,
+                checkpointer=checkpointer,
+                nodes=self.nodes,
+                specs=self.channels,
+                output_keys=output_keys,
+                input_keys=self.input_channels,
+                stream_keys=self.stream_channels_asis,
+                interrupt_before=interrupt_before_,
+                interrupt_after=interrupt_after_,
+                manager=run_manager,
+                durability=durability_,
+                trigger_to_nodes=self.trigger_to_nodes,
+                migrate_checkpoint=self._migrate_checkpoint,
+                retry_policy=self.retry_policy,
+                cache_policy=self.cache_policy,
+            ) as loop:
+                # create runner
+                runner = PregelRunner(
+                    submit=config[CONF].get(
+                        CONFIG_KEY_RUNNER_SUBMIT, weakref.WeakMethod(loop.submit)
+                    ),
+                    put_writes=weakref.WeakMethod(loop.put_writes),
+                    use_astream=do_stream,
+                    node_finished=config[CONF].get(CONFIG_KEY_NODE_FINISHED),
+                )
+                # enable subgraph streaming
+                if subgraphs:
+                    loop.config[CONF][CONFIG_KEY_STREAM] = StreamProtocol(
+                        stream_put, stream_modes
+                    )
+                # enable concurrent streaming
+                get_waiter: Callable[[], asyncio.Task[None]] | None = None
+                _cleanup_waiter: Callable[[], Awaitable[None]] | None = None
+                if (
+                    self.stream_eager
+                    or subgraphs
+                    or "messages" in stream_modes
+                    or "custom" in stream_modes
+                ):
+                    # Keep a single waiter task alive; ensure cleanup on exit.
+                    waiter: asyncio.Task[None] | None = None
+    
+                    def get_waiter() -> asyncio.Task[None]:
+                        nonlocal waiter
+                        if waiter is None or waiter.done():
+                            waiter = aioloop.create_task(stream.wait())
+    
+                            def _clear(t: asyncio.Task[None]) -> None:
+                                nonlocal waiter
+                                if waiter is t:
+                                    waiter = None
+    
+                            waiter.add_done_callback(_clear)
+                        return waiter
+    
+                    async def _cleanup_waiter() -> None:
+                        """Wake pending waiter and/or cancel+await to avoid pending tasks."""
+                        nonlocal waiter
+                        # Try to wake via semaphore like SyncPregelLoop
+                        with contextlib.suppress(Exception):
+                            if hasattr(stream, "_count"):
+                                stream._count.release()
+                        t = waiter
+                        waiter = None
+                        if t is not None and not t.done():
+                            t.cancel()
+                            with contextlib.suppress(asyncio.CancelledError):
+                                await t
+    
+                # Similarly to Bulk Synchronous Parallel / Pregel model
+                # computation proceeds in steps, while there are channel updates
+                # channel updates from step N are only visible in step N+1
+                # channels are guaranteed to be immutable for the duration of the step,
+                # with channel updates applied only at the transition between steps
+                try:
+                    while loop.tick():
+                        for task in await loop.amatch_cached_writes():
+                            loop.output_writes(task.id, task.writes, cached=True)
+>                       async for _ in runner.atick(
+                            [t for t in loop.tasks.values() if not t.writes],
+                            timeout=self.step_timeout,
+                            get_waiter=get_waiter,
+                            schedule_task=loop.aaccept_push,
+                        ):
+
+.venv\Lib\site-packages\langgraph\pregel\main.py:2974: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <langgraph.pregel._runner.PregelRunner object at 0x000001BAD61852D0>
+tasks = (PregelExecutableTask(name='response', input={'messages': [{'role': 'user', 'content': 'I have a headache and slight f...=[]), ChannelWriteEntry(channel='branch:to:save_history', value=None, skip_none=False, mapper=None)))], subgraphs=[]),)
+
+    async def atick(
+        self,
+        tasks: Iterable[PregelExecutableTask],
+        *,
+        reraise: bool = True,
+        timeout: float | None = None,
+        retry_policy: Sequence[RetryPolicy] | None = None,
+        get_waiter: Callable[[], asyncio.Future[None]] | None = None,
+        schedule_task: Callable[
+            [PregelExecutableTask, int, Call | None],
+            Awaitable[PregelExecutableTask | None],
+        ],
+    ) -> AsyncIterator[None]:
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        tasks = tuple(tasks)
+        futures = FuturesDict(
+            callback=weakref.WeakMethod(self.commit),
+            event=asyncio.Event(),
+            future_type=asyncio.Future,
+        )
+        # give control back to the caller
+        yield
+        # fast path if single task with no waiter and no timeout
+        if len(tasks) == 0:
+            return
+        elif len(tasks) == 1 and get_waiter is None and timeout is None:
+            t = tasks[0]
+            try:
+>               await arun_with_retry(
+                    t,
+                    retry_policy,
+                    stream=self.use_astream,
+                    configurable={
+                        CONFIG_KEY_CALL: partial(
+                            _acall,
+                            weakref.ref(t),
+                            stream=self.use_astream,
+                            retry_policy=retry_policy,
+                            futures=weakref.ref(futures),
+                            schedule_task=schedule_task,
+                            submit=self.submit,
+                            loop=loop,
+                        ),
+                    },
+                )
+
+.venv\Lib\site-packages\langgraph\pregel\_runner.py:304: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+task = PregelExecutableTask(name='response', input={'messages': [{'role': 'user', 'content': 'I have a headache and slight fe...ic=[]), ChannelWriteEntry(channel='branch:to:save_history', value=None, skip_none=False, mapper=None)))], subgraphs=[])
+retry_policy = None, stream = False, match_cached_writes = None
+configurable = {'__pregel_call': functools.partial(<function _acall at 0x000001BAB2055B20>, <weakref at 0x000001BAD899D4E0; to 'Prege... to 'AsyncBackgroundExecutor' at 0x000001BAD5FDEA10>, loop=<ProactorEventLoop running=False closed=False debug=False>)}
+
+    async def arun_with_retry(
+        task: PregelExecutableTask,
+        retry_policy: Sequence[RetryPolicy] | None,
+        stream: bool = False,
+        match_cached_writes: Callable[[], Awaitable[Sequence[PregelExecutableTask]]]
+        | None = None,
+        configurable: dict[str, Any] | None = None,
+    ) -> None:
+        """Run a task asynchronously with retries."""
+        retry_policy = task.retry_policy or retry_policy
+        attempts = 0
+        config = task.config
+        if configurable is not None:
+            config = patch_configurable(config, configurable)
+        if match_cached_writes is not None and task.cache_key is not None:
+            for t in await match_cached_writes():
+                if t is task:
+                    # if the task is already cached, return
+                    return
+        while True:
+            try:
+                # clear any writes from previous attempts
+                task.writes.clear()
+                # run the task
+                if stream:
+                    async for _ in task.proc.astream(task.input, config):
+                        pass
+                    # if successful, end
+                    break
+                else:
+>                   return await task.proc.ainvoke(task.input, config)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.venv\Lib\site-packages\langgraph\pregel\_retry.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <langgraph._internal._runnable.RunnableSeq object at 0x000001BAD895EE90>
+input = {'audio_url': '', 'disease_candidates': [], 'final_response': '\U0001fa7a Summary: Mild headache with fever.\\nDISCLAIMER: This ..., NOT a medical diagnosis. Always consult a licensed physician for personal medical advice.', 'followup_count': 0, ...}
+config = {'callbacks': <langchain_core.callbacks.manager.AsyncCallbackManager object at 0x000001BAD895F610>, 'configurable': {'...2cffb7cd41', 'langgraph_node': 'response', 'langgraph_path': ('__pregel_pull', 'response'), 'langgraph_step': 11, ...}}
+kwargs = {}
+callback_manager = <langchain_core.callbacks.manager.AsyncCallbackManager object at 0x000001BAD895F590>
+run_manager = <langchain_core.callbacks.manager.AsyncCallbackManagerForChainRun object at 0x000001BAD895FA90>
+i = 0
+step = response(tags=None, recurse=True, explode_args=False, func_accepts={})
+run = None, context = <_contextvars.Context object at 0x000001BAD61B0B80>
+
+    async def ainvoke(
+        self,
+        input: Input,
+        config: RunnableConfig | None = None,
+        **kwargs: Any | None,
+    ) -> Any:
+        if config is None:
+            config = ensure_config()
+        # setup callbacks
+        callback_manager = get_async_callback_manager_for_config(config)
+        # start the root run
+        run_manager = await callback_manager.on_chain_start(
+            None,
+            self.trace_inputs(input) if self.trace_inputs is not None else input,
+            name=config.get("run_name") or self.get_name(),
+            run_id=config.pop("run_id", None),
+        )
+    
+        # invoke all steps in sequence
+        try:
+            for i, step in enumerate(self.steps):
+                # mark each step as a child run
+                config = patch_config(
+                    config, callbacks=run_manager.get_child(f"seq:step:{i + 1}")
+                )
+                # 1st step is the actual node,
+                # others are writers which don't need to be run in context
+                if i == 0:
+                    if ASYNCIO_ACCEPTS_CONTEXT:
+                        # get the run object
+                        for h in run_manager.handlers:
+                            if isinstance(h, LangChainTracer):
+                                run = h.run_map.get(str(run_manager.run_id))
+                                break
+                        else:
+                            run = None
+                        # run in context
+                        with set_config_context(config, run) as context:
+>                           input = await asyncio.create_task(
+                                step.ainvoke(input, config, **kwargs), context=context
+                            )
+
+.venv\Lib\site-packages\langgraph\_internal\_runnable.py:705: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = response(tags=None, recurse=True, explode_args=False, func_accepts={})
+input = {'audio_url': '', 'disease_candidates': [], 'final_response': '\U0001fa7a Summary: Mild headache with fever.\\nDISCLAIMER: This ..., NOT a medical diagnosis. Always consult a licensed physician for personal medical advice.', 'followup_count': 0, ...}
+config = {'callbacks': <langchain_core.callbacks.manager.AsyncCallbackManager object at 0x000001BAD895F610>, 'configurable': {'...2cffb7cd41', 'langgraph_node': 'response', 'langgraph_path': ('__pregel_pull', 'response'), 'langgraph_step': 11, ...}}
+kwargs = {}
+args = ({'audio_url': '', 'disease_candidates': [], 'final_response': '\U0001fa7a Summary: Mild headache with fever.\\nDISCLAIMER: This...NOT a medical diagnosis. Always consult a licensed physician for personal medical advice.', 'followup_count': 0, ...},)
+runtime = Runtime(context=None, store=None, stream_writer=<function Pregel.astream.<locals>.stream_writer at 0x000001BAD896B9C0>, previous=None)
+
+    async def ainvoke(
+        self, input: Any, config: RunnableConfig | None = None, **kwargs: Any
+    ) -> Any:
+        if not self.afunc:
+            return self.invoke(input, config)
+        if config is None:
+            config = ensure_config()
+        if self.explode_args:
+            args, _kwargs = input
+            kwargs = {**self.kwargs, **_kwargs, **kwargs}
+        else:
+            args = (input,)
+            kwargs = {**self.kwargs, **kwargs}
+    
+        runtime = config.get(CONF, {}).get(CONFIG_KEY_RUNTIME)
+    
+        for kw, (runtime_key, default) in self.func_accepts.items():
+            # If the kwarg has already been set, use the set value
+            if kw in kwargs:
+                continue
+    
+            kw_value: Any = MISSING
+            if kw == "config":
+                kw_value = config
+            elif runtime:
+                if kw == "runtime":
+                    kw_value = runtime
+                else:
+                    try:
+                        kw_value = getattr(runtime, runtime_key)
+                    except AttributeError:
+                        pass
+            if kw_value is MISSING:
+                if default is inspect.Parameter.empty:
+                    raise ValueError(
+                        f"Missing required config key '{runtime_key}' for '{self.name}'."
+                    )
+                kw_value = default
+            kwargs[kw] = kw_value
+    
+        if self.trace:
+            callback_manager = get_async_callback_manager_for_config(config, self.tags)
+            run_manager = await callback_manager.on_chain_start(
+                None,
+                input,
+                name=config.get("run_name") or self.name,
+                run_id=config.pop("run_id", None),
+            )
+            try:
+                child_config = patch_config(config, callbacks=run_manager.get_child())
+                coro = cast(Coroutine[None, None, Any], self.afunc(*args, **kwargs))
+                if ASYNCIO_ACCEPTS_CONTEXT:
+                    for h in run_manager.handlers:
+                        if isinstance(h, LangChainTracer):
+                            run = h.run_map.get(str(run_manager.run_id))
+                            break
+                    else:
+                        run = None
+                    with set_config_context(child_config, run) as context:
+                        ret = await asyncio.create_task(coro, context=context)
+                else:
+                    ret = await coro
+            except BaseException as e:
+                await run_manager.on_chain_error(e)
+                raise
+            else:
+                await run_manager.on_chain_end(ret)
+        else:
+>           ret = await self.afunc(*args, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.venv\Lib\site-packages\langgraph\_internal\_runnable.py:473: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+executor_or_config = None, func = <function response_node at 0x000001BAB206F9C0>
+args = ({'audio_url': '', 'disease_candidates': [], 'final_response': '\U0001fa7a Summary: Mild headache with fever.\\nDISCLAIMER: This...NOT a medical diagnosis. Always consult a licensed physician for personal medical advice.', 'followup_count': 0, ...},)
+kwargs = {}
+wrapper = <function run_in_executor.<locals>.wrapper at 0x000001BAD896AAC0>
+
+    async def run_in_executor(
+        executor_or_config: Executor | RunnableConfig | None,
+        func: Callable[P, T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        """Run a function in an executor.
+    
+        Args:
+            executor_or_config: The executor or config to run in.
+            func: The function.
+            *args: The positional arguments to the function.
+            **kwargs: The keyword arguments to the function.
+    
+        Returns:
+            The output of the function.
+        """
+    
+        def wrapper() -> T:
+            try:
+                return func(*args, **kwargs)
+            except StopIteration as exc:
+                # StopIteration can't be set on an asyncio.Future
+                # it raises a TypeError and leaves the Future pending forever
+                # so we need to convert it to a RuntimeError
+                raise RuntimeError from exc
+    
+        if executor_or_config is None or isinstance(executor_or_config, dict):
+            # Use default executor with context copied from current context
+>           return await asyncio.get_running_loop().run_in_executor(
+                None,
+                cast("Callable[..., T]", partial(copy_context().run, wrapper)),
+            )
+
+.venv\Lib\site-packages\langchain_core\runnables\config.py:627: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = None
+
+    def run(self):
+        if not self.future.set_running_or_notify_cancel():
+            return
+    
+        try:
+>           result = self.fn(*self.args, **self.kwargs)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Users\lenovo\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\concurrent\futures\thread.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def wrapper() -> T:
+        try:
+>           return func(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^
+
+.venv\Lib\site-packages\langchain_core\runnables\config.py:618: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+state = {'audio_url': '', 'disease_candidates': [], 'final_response': '\U0001fa7a Summary: Mild headache with fever.\\nDISCLAIMER: This ..., NOT a medical diagnosis. Always consult a licensed physician for personal medical advice.', 'followup_count': 0, ...}
+
+    def response_node(state: TriageState) -> TriageState:
+        """
+        Formats the validated response into a final deliverable output.
+    
+        No LLM calls. Pure string formatting and state assembly.
+    
+        Args:
+            state: Contains validated_response, nutrition data, risk data.
+    
+        Returns:
+            TriageState: With final_response populated and appended to messages.
+        """
+        next_action = state.get("next_action", "")
+    
+        # \u2500\u2500 Case 1: Follow-up in progress \u2014 nothing to format \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        if next_action == "ask_followup":
+            state["final_response"] = ""
+            return state
+    
+        # \u2500\u2500 Case 2: Priority interrupt \u2014 already handled by llm_brain \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        if next_action == "priority_interrupt":
+            # The emergency message is already in messages from llm_brain
+            messages = state.get("messages", [])
+            if messages:
+                state["final_response"] = messages[-1].get("content", "")
+            return state
+    
+        # \u2500\u2500 Case 3: Standard response formatting \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        validated = state.get("validated_response", "")
+    
+        # If no validated_response, use the last assistant message
+        if not validated:
+            messages = state.get("messages", [])
+            assistant_msgs = [m for m in messages if m.get("role") == "assistant"]
+            if assistant_msgs:
+                validated = assistant_msgs[-1].get("content", "")
+    
+        # \u2500\u2500 Build final structured output \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        final = validated
+    
+        # Ensure disclaimer is present (llm_brain already adds DISCLAIMER: section;
+        # this guard is only for paths where llm_brain didn't run, e.g. vision)
+        if "disclaimer" not in final.lower() and "Disclaimer" not in final:
+            final += (
+                "\nDISCLAIMER: This is a triage tool only, NOT a medical diagnosis. "
+                "Always consult a licensed physician."
+            )
+    
+        state["final_response"] = final
+    
+        # Update the last assistant message with the formatted version
+        messages = state.get("messages", [])
+        if messages:
+            # Find and update the last assistant message
+            for i in range(len(messages) - 1, -1, -1):
+                if messages[i].get("role") == "assistant":
+                    messages[i]["content"] = final
+                    break
+            else:
+                # No assistant message found ù append one
+                messages.append({"role": "assistant", "content": final})
+    
+        log_event(logger, "response_formatted",
+>                 has_nutrition_image=bool(nutrition_image),
+                                           ^^^^^^^^^^^^^^^
+                  response_length=len(final))
+E       NameError: name 'nutrition_image' is not defined
+E       During task with name 'response' and id '53b1bd9b-c2f4-1604-0d00-ba2cffb7cd41'
+
+backend\src\nodes\response_node.py:106: NameError
+---------------------------- Captured stdout call -----------------------------
+[tavily_tool] TAVILY_API_KEY not set ù skipping retrieval.
+---------------------------- Captured stderr call -----------------------------
+{"timestamp": "2026-02-26T16:19:20.171578+00:00", "level": "INFO", "module": "", "message": "session_created", "data": {"session_id": "new-session-abc"}}
+{"timestamp": "2026-02-26T16:19:20.174561+00:00", "level": "INFO", "module": "", "message": "intent_classified", "data": {"intent": "medical_text", "source": "default"}}
+{"timestamp": "2026-02-26T16:19:20.176563+00:00", "level": "INFO", "module": "", "message": "symptoms_extracted", "data": {"symptoms": ["nausea", "pain at right side", "severe stomach pain", "fever", "headache", "stomach pain", "slight fever"], "language": "en", "count": 2}}
+{"timestamp": "2026-02-26T16:19:20.177633+00:00", "level": "INFO", "module": "", "message": "disease_retrieval_complete", "data": {"symptom_count": 7, "candidates_found": 0}}
+{"timestamp": "2026-02-26T16:19:20.178664+00:00", "level": "INFO", "module": "", "message": "risk_evaluated", "data": {"risk_score": 3.0, "risk_level": "low", "confidence": 0.9}}
+{"timestamp": "2026-02-26T16:19:20.179669+00:00", "level": "INFO", "module": "", "message": "svm_analysis_complete", "data": {"svm_confidence": 1.0, "blended_confidence": 0.94, "cluster_matched": false, "symptom_count": 7}}
+{"timestamp": "2026-02-26T16:19:20.179669+00:00", "level": "INFO", "module": "", "message": "response_generated", "data": {"risk_level": "low", "language": "en", "response_length": 166}}
+{"timestamp": "2026-02-26T16:19:20.180793+00:00", "level": "INFO", "module": "", "message": "judge_validated", "data": {"result": "pass", "regeneration_count": 0}}
+{"timestamp": "2026-02-26T16:19:20.181792+00:00", "level": "INFO", "module": "", "message": "nutrition_generated", "data": {"risk_level": "low", "has_image": false}}
+------------------------------ Captured log call ------------------------------
+INFO     triguard.load_session::0 session_created
+INFO     triguard.classification::0 intent_classified
+INFO     triguard.symptom_extraction::0 symptoms_extracted
+INFO     triguard.disease_retrieval::0 disease_retrieval_complete
+INFO     triguard.risk_evaluation::0 risk_evaluated
+INFO     triguard.svm_analysis::0 svm_analysis_complete
+INFO     triguard.llm_brain::0 response_generated
+INFO     triguard.judge_validator::0 judge_validated
+INFO     triguard.nutrition::0 nutrition_generated
+_______________________ test_vision_pipeline_full_flow ________________________
+
+mock_create = <AsyncMock name='create_session' id='1902007147472'>
+mock_vision = <AsyncMock name='analyze_medical_image' id='1902008979216'>
+mock_brain = <MagicMock name='call_llama' id='1902008978896'>
+mock_judge = <MagicMock name='call_llama' id='1902008981520'>
+mock_update = <AsyncMock name='update_session' id='1902009024592'>
+mock_report = <AsyncMock name='save_report' id='1902009028880'>
+mock_log = <AsyncMock name='insert_log' id='1902009101392'>
+
+    @patch("backend.src.nodes.save_session_node.insert_log", new_callable=AsyncMock)
+    @patch("backend.src.nodes.save_session_node.save_report", new_callable=AsyncMock)
+    @patch("backend.src.nodes.save_session_node.update_session", new_callable=AsyncMock)
+    @patch("backend.src.nodes.judge_validator_node.call_llama", return_value="PASS")
+    @patch("backend.src.nodes.llm_brain_node.call_llama",
+           return_value="Possible skin rash. Consult a dermatologist.")
+    @patch("backend.src.nodes.medical_vision_node.analyze_medical_image", new_callable=AsyncMock,
+           return_value={
+               "image_type": "skin",
+               "visual_findings": ["redness"],
+               "confidence": 0.80,
+               "explanation": "Possible rash.",
+           })
+    @patch("backend.src.nodes.load_session_node.create_session", new_callable=AsyncMock,
+           return_value="vision-session-abc")
+    def test_vision_pipeline_full_flow(
+        mock_create, mock_vision, mock_brain, mock_judge,
+        mock_update, mock_report, mock_log
+    ):
+        """Full vision pipeline: new session \u2192 medical_vision \u2192 llm_brain \u2192 judge \u2192 nutrition \u2192 save."""
+        from backend.src.graph.builder import build_triage_graph
+    
+        graph = build_triage_graph()
+        state = _init_state(
+            messages=[{"role": "user", "content": "Analyzed image"}],
+            input_mode="image",
+            image_input=b"\xff\xd8\xff" + b"\x00" * 50,
+        )
+>       result = run(graph.ainvoke(state))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_graph_integration.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+coro = <coroutine object Pregel.ainvoke at 0x000001BAD8892260>
+
+    def run(coro):
+>       return asyncio.get_event_loop().run_until_complete(coro)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+backend\tests\test_graph_integration.py:16: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <ProactorEventLoop running=False closed=False debug=False>
+future = <Task finished name='Task-37' coro=<Pregel.ainvoke() done, defined at E:\My Projects\TriGaurd Ai-Voice Enabled intelli...nt\.venv\Lib\site-packages\langgraph\pregel\main.py:3114> exception=NameError("name 'nutrition_image' is not defined")>
+
+    def run_until_complete(self, future):
+        """Run until the Future is done.
+    
+        If the argument is a coroutine, it is wrapped in a Task.
+    
+        WARNING: It would be disastrous to call run_until_complete()
+        with the same coroutine twice -- it would wrap it in two
+        different Tasks and that can't be good.
+    
+        Return the Future's result, or raise its exception.
+        """
+        self._check_closed()
+        self._check_running()
+    
+        new_task = not futures.isfuture(future)
+        future = tasks.ensure_future(future, loop=self)
+        if new_task:
+            # An exception is raised if the future didn't complete, so there
+            # is no need to log the "destroy pending task" message
+            future._log_destroy_pending = False
+    
+        future.add_done_callback(_run_until_complete_cb)
+        try:
+            self.run_forever()
+        except:
+            if new_task and future.done() and not future.cancelled():
+                # The coroutine raised a BaseException. Consume the exception
+                # to not log a warning, the caller doesn't have access to the
+                # local task.
+                future.exception()
+            raise
+        finally:
+            future.remove_done_callback(_run_until_complete_cb)
+        if not future.done():
+            raise RuntimeError('Event loop stopped before Future completed.')
+    
+>       return future.result()
+               ^^^^^^^^^^^^^^^
+
+C:\Users\lenovo\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\asyncio\base_events.py:654: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <langgraph.graph.state.CompiledStateGraph object at 0x000001BAD892F850>
+input = {'audio_url': '', 'followup_count': 0, 'image_input': b'\xff\xd8\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x...0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'input_mode': 'image', ...}
+config = None, context = None, stream_mode = 'values', print_mode = ()
+output_keys = ['messages', 'original_input', 'intent', 'image_type_hint', 'symptoms', 'followup_count', ...]
+interrupt_before = None, interrupt_after = None, durability = None, kwargs = {}
+
+    async def ainvoke(
+        self,
+        input: InputT | Command | None,
+        config: RunnableConfig | None = None,
+        *,
+        context: ContextT | None = None,
+        stream_mode: StreamMode = "values",
+        print_mode: StreamMode | Sequence[StreamMode] = (),
+        output_keys: str | Sequence[str] | None = None,
+        interrupt_before: All | Sequence[str] | None = None,
+        interrupt_after: All | Sequence[str] | None = None,
+        durability: Durability | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any] | Any:
+        """Asynchronously run the graph with a single input and config.
+    
+        Args:
+            input: The input data for the graph. It can be a dictionary or any other type.
+            config: The configuration for the graph run.
+            context: The static context to use for the run.
+                !!! version-added "Added in version 0.6.0"
+            stream_mode: The stream mode for the graph run.
+            print_mode: Accepts the same values as `stream_mode`, but only prints the output to the console, for debugging purposes.
+    
+                Does not affect the output of the graph in any way.
+            output_keys: The output keys to retrieve from the graph run.
+            interrupt_before: The nodes to interrupt the graph run before.
+            interrupt_after: The nodes to interrupt the graph run after.
+            durability: The durability mode for the graph execution, defaults to `"async"`.
+    
+                Options are:
+    
+                - `"sync"`: Changes are persisted synchronously before the next step starts.
+                - `"async"`: Changes are persisted asynchronously while the next step executes.
+                - `"exit"`: Changes are persisted only when the graph exits.
+            **kwargs: Additional keyword arguments to pass to the graph run.
+    
+        Returns:
+            The output of the graph run. If `stream_mode` is `"values"`, it returns the latest output.
+            If `stream_mode` is not `"values"`, it returns a list of output chunks.
+        """
+        output_keys = output_keys if output_keys is not None else self.output_channels
+    
+        latest: dict[str, Any] | Any = None
+        chunks: list[dict[str, Any] | Any] = []
+        interrupts: list[Interrupt] = []
+    
+>       async for chunk in self.astream(
+            input,
+            config,
+            context=context,
+            stream_mode=["updates", "values"]
+            if stream_mode == "values"
+            else stream_mode,
+            print_mode=print_mode,
+            output_keys=output_keys,
+            interrupt_before=interrupt_before,
+            interrupt_after=interrupt_after,
+            durability=durability,
+            **kwargs,
+        ):
+
+.venv\Lib\site-packages\langgraph\pregel\main.py:3161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <langgraph.graph.state.CompiledStateGraph object at 0x000001BAD892F850>
+input = {'audio_url': '', 'followup_count': 0, 'image_input': b'\xff\xd8\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x...0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'input_mode': 'image', ...}
+config = {'callbacks': None, 'configurable': {'__pregel_runtime': Runtime(context=None, store=None, stream_writer=<function Pre...locals>.stream_writer at 0x000001BAD89A8720>, previous=None)}, 'metadata': ChainMap({}), 'recursion_limit': 10000, ...}
+context = None, stream_mode = ['updates', 'values'], print_mode = ()
+output_keys = ['messages', 'original_input', 'intent', 'image_type_hint', 'symptoms', 'followup_count', ...]
+interrupt_before = None, interrupt_after = None, durability = None
+subgraphs = False
+
+    async def astream(
+        self,
+        input: InputT | Command | None,
+        config: RunnableConfig | None = None,
+        *,
+        context: ContextT | None = None,
+        stream_mode: StreamMode | Sequence[StreamMode] | None = None,
+        print_mode: StreamMode | Sequence[StreamMode] = (),
+        output_keys: str | Sequence[str] | None = None,
+        interrupt_before: All | Sequence[str] | None = None,
+        interrupt_after: All | Sequence[str] | None = None,
+        durability: Durability | None = None,
+        subgraphs: bool = False,
+        debug: bool | None = None,
+        **kwargs: Unpack[DeprecatedKwargs],
+    ) -> AsyncIterator[dict[str, Any] | Any]:
+        """Asynchronously stream graph steps for a single input.
+    
+        Args:
+            input: The input to the graph.
+            config: The configuration to use for the run.
+            context: The static context to use for the run.
+                !!! version-added "Added in version 0.6.0"
+            stream_mode: The mode to stream output, defaults to `self.stream_mode`.
+    
+                Options are:
+    
+                - `"values"`: Emit all values in the state after each step, including interrupts.
+                    When used with functional API, values are emitted once at the end of the workflow.
+                - `"updates"`: Emit only the node or task names and updates returned by the nodes or tasks after each step.
+                    If multiple updates are made in the same step (e.g. multiple nodes are run) then those updates are emitted separately.
+                - `"custom"`: Emit custom data from inside nodes or tasks using `StreamWriter`.
+                - `"messages"`: Emit LLM messages token-by-token together with metadata for any LLM invocations inside nodes or tasks.
+                    - Will be emitted as 2-tuples `(LLM token, metadata)`.
+                - `"checkpoints"`: Emit an event when a checkpoint is created, in the same format as returned by `get_state()`.
+                - `"tasks"`: Emit events when tasks start and finish, including their results and errors.
+                - `"debug"`: Emit debug events with as much information as possible for each step.
+    
+                You can pass a list as the `stream_mode` parameter to stream multiple modes at once.
+                The streamed outputs will be tuples of `(mode, data)`.
+    
+                See [LangGraph streaming guide](https://docs.langchain.com/oss/python/langgraph/streaming) for more details.
+            print_mode: Accepts the same values as `stream_mode`, but only prints the output to the console, for debugging purposes.
+    
+                Does not affect the output of the graph in any way.
+            output_keys: The keys to stream, defaults to all non-context channels.
+            interrupt_before: Nodes to interrupt before, defaults to all nodes in the graph.
+            interrupt_after: Nodes to interrupt after, defaults to all nodes in the graph.
+            durability: The durability mode for the graph execution, defaults to `"async"`.
+    
+                Options are:
+    
+                - `"sync"`: Changes are persisted synchronously before the next step starts.
+                - `"async"`: Changes are persisted asynchronously while the next step executes.
+                - `"exit"`: Changes are persisted only when the graph exits.
+            subgraphs: Whether to stream events from inside subgraphs, defaults to `False`.
+    
+                If `True`, the events will be emitted as tuples `(namespace, data)`,
+                or `(namespace, mode, data)` if `stream_mode` is a list,
+                where `namespace` is a tuple with the path to the node where a subgraph is invoked,
+                e.g. `("parent_node:<task_id>", "child_node:<task_id>")`.
+    
+                See [LangGraph streaming guide](https://docs.langchain.com/oss/python/langgraph/streaming) for more details.
+    
+        Yields:
+            The output of each step in the graph. The output shape depends on the `stream_mode`.
+        """
+        if (checkpoint_during := kwargs.get("checkpoint_during")) is not None:
+            warnings.warn(
+                "`checkpoint_during` is deprecated and will be removed. Please use `durability` instead.",
+                category=LangGraphDeprecatedSinceV10,
+                stacklevel=2,
+            )
+            if durability is not None:
+                raise ValueError(
+                    "Cannot use both `checkpoint_during` and `durability` parameters. Please use `durability` instead."
+                )
+            durability = "async" if checkpoint_during else "exit"
+    
+        if stream_mode is None:
+            # if being called as a node in another graph, default to values mode
+            # but don't overwrite stream_mode arg if provided
+            stream_mode = (
+                "values"
+                if config is not None and CONFIG_KEY_TASK_ID in config.get(CONF, {})
+                else self.stream_mode
+            )
+        if debug or self.debug:
+            print_mode = ["updates", "values"]
+    
+        stream = AsyncQueue()
+        aioloop = asyncio.get_running_loop()
+        stream_put = cast(
+            Callable[[StreamChunk], None],
+            partial(aioloop.call_soon_threadsafe, stream.put_nowait),
+        )
+    
+        config = ensure_config(self.config, config)
+        callback_manager = get_async_callback_manager_for_config(config)
+        run_manager = await callback_manager.on_chain_start(
+            None,
+            input,
+            name=config.get("run_name", self.get_name()),
+            run_id=config.get("run_id"),
+        )
+        # if running from astream_log() run each proc with streaming
+        do_stream = (
+            next(
+                (
+                    True
+                    for h in run_manager.handlers
+                    if isinstance(h, _StreamingCallbackHandler)
+                    and not isinstance(h, StreamMessagesHandler)
+                ),
+                False,
+            )
+            if _StreamingCallbackHandler is not None
+            else False
+        )
+        try:
+            # assign defaults
+            (
+                stream_modes,
+                output_keys,
+                interrupt_before_,
+                interrupt_after_,
+                checkpointer,
+                store,
+                cache,
+                durability_,
+            ) = self._defaults(
+                config,
+                stream_mode=stream_mode,
+                print_mode=print_mode,
+                output_keys=output_keys,
+                interrupt_before=interrupt_before,
+                interrupt_after=interrupt_after,
+                durability=durability,
+            )
+            if checkpointer is None and durability is not None:
+                warnings.warn(
+                    "`durability` has no effect when no checkpointer is present.",
+                )
+            # set up subgraph checkpointing
+            if self.checkpointer is True:
+                ns = cast(str, config[CONF][CONFIG_KEY_CHECKPOINT_NS])
+                config[CONF][CONFIG_KEY_CHECKPOINT_NS] = recast_checkpoint_ns(ns)
+            # set up messages stream mode
+            if "messages" in stream_modes:
+                # namespace can be None in a root level graph?
+                ns_ = cast(str | None, config[CONF].get(CONFIG_KEY_CHECKPOINT_NS))
+                run_manager.inheritable_handlers.append(
+                    StreamMessagesHandler(
+                        stream_put,
+                        subgraphs,
+                        parent_ns=tuple(ns_.split(NS_SEP)) if ns_ else None,
+                    )
+                )
+    
+            # set up custom stream mode
+            def stream_writer(c: Any) -> None:
+                aioloop.call_soon_threadsafe(
+                    stream.put_nowait,
+                    (
+                        tuple(
+                            get_config()[CONF][CONFIG_KEY_CHECKPOINT_NS].split(NS_SEP)[
+                                :-1
+                            ]
+                        ),
+                        "custom",
+                        c,
+                    ),
+                )
+    
+            if "custom" in stream_modes:
+    
+                def stream_writer(c: Any) -> None:
+                    aioloop.call_soon_threadsafe(
+                        stream.put_nowait,
+                        (
+                            tuple(
+                                get_config()[CONF][CONFIG_KEY_CHECKPOINT_NS].split(
+                                    NS_SEP
+                                )[:-1]
+                            ),
+                            "custom",
+                            c,
+                        ),
+                    )
+            elif CONFIG_KEY_STREAM in config[CONF]:
+                stream_writer = config[CONF][CONFIG_KEY_RUNTIME].stream_writer
+            else:
+    
+                def stream_writer(c: Any) -> None:
+                    pass
+    
+            # set durability mode for subgraphs
+            if durability is not None:
+                config[CONF][CONFIG_KEY_DURABILITY] = durability_
+    
+            runtime = Runtime(
+                context=_coerce_context(self.context_schema, context),
+                store=store,
+                stream_writer=stream_writer,
+                previous=None,
+            )
+            parent_runtime = config[CONF].get(CONFIG_KEY_RUNTIME, DEFAULT_RUNTIME)
+            runtime = parent_runtime.merge(runtime)
+            config[CONF][CONFIG_KEY_RUNTIME] = runtime
+    
+            async with AsyncPregelLoop(
+                input,
+                stream=StreamProtocol(stream.put_nowait, stream_modes),
+                config=config,
+                store=store,
+                cache=cache,
+                checkpointer=checkpointer,
+                nodes=self.nodes,
+                specs=self.channels,
+                output_keys=output_keys,
+                input_keys=self.input_channels,
+                stream_keys=self.stream_channels_asis,
+                interrupt_before=interrupt_before_,
+                interrupt_after=interrupt_after_,
+                manager=run_manager,
+                durability=durability_,
+                trigger_to_nodes=self.trigger_to_nodes,
+                migrate_checkpoint=self._migrate_checkpoint,
+                retry_policy=self.retry_policy,
+                cache_policy=self.cache_policy,
+            ) as loop:
+                # create runner
+                runner = PregelRunner(
+                    submit=config[CONF].get(
+                        CONFIG_KEY_RUNNER_SUBMIT, weakref.WeakMethod(loop.submit)
+                    ),
+                    put_writes=weakref.WeakMethod(loop.put_writes),
+                    use_astream=do_stream,
+                    node_finished=config[CONF].get(CONFIG_KEY_NODE_FINISHED),
+                )
+                # enable subgraph streaming
+                if subgraphs:
+                    loop.config[CONF][CONFIG_KEY_STREAM] = StreamProtocol(
+                        stream_put, stream_modes
+                    )
+                # enable concurrent streaming
+                get_waiter: Callable[[], asyncio.Task[None]] | None = None
+                _cleanup_waiter: Callable[[], Awaitable[None]] | None = None
+                if (
+                    self.stream_eager
+                    or subgraphs
+                    or "messages" in stream_modes
+                    or "custom" in stream_modes
+                ):
+                    # Keep a single waiter task alive; ensure cleanup on exit.
+                    waiter: asyncio.Task[None] | None = None
+    
+                    def get_waiter() -> asyncio.Task[None]:
+                        nonlocal waiter
+                        if waiter is None or waiter.done():
+                            waiter = aioloop.create_task(stream.wait())
+    
+                            def _clear(t: asyncio.Task[None]) -> None:
+                                nonlocal waiter
+                                if waiter is t:
+                                    waiter = None
+    
+                            waiter.add_done_callback(_clear)
+                        return waiter
+    
+                    async def _cleanup_waiter() -> None:
+                        """Wake pending waiter and/or cancel+await to avoid pending tasks."""
+                        nonlocal waiter
+                        # Try to wake via semaphore like SyncPregelLoop
+                        with contextlib.suppress(Exception):
+                            if hasattr(stream, "_count"):
+                                stream._count.release()
+                        t = waiter
+                        waiter = None
+                        if t is not None and not t.done():
+                            t.cancel()
+                            with contextlib.suppress(asyncio.CancelledError):
+                                await t
+    
+                # Similarly to Bulk Synchronous Parallel / Pregel model
+                # computation proceeds in steps, while there are channel updates
+                # channel updates from step N are only visible in step N+1
+                # channels are guaranteed to be immutable for the duration of the step,
+                # with channel updates applied only at the transition between steps
+                try:
+                    while loop.tick():
+                        for task in await loop.amatch_cached_writes():
+                            loop.output_writes(task.id, task.writes, cached=True)
+>                       async for _ in runner.atick(
+                            [t for t in loop.tasks.values() if not t.writes],
+                            timeout=self.step_timeout,
+                            get_waiter=get_waiter,
+                            schedule_task=loop.aaccept_push,
+                        ):
+
+.venv\Lib\site-packages\langgraph\pregel\main.py:2974: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <langgraph.pregel._runner.PregelRunner object at 0x000001BAD8CFB0D0>
+tasks = (PregelExecutableTask(name='response', input={'messages': [{'role': 'user', 'content': 'I have a headache and slight f...=[]), ChannelWriteEntry(channel='branch:to:save_history', value=None, skip_none=False, mapper=None)))], subgraphs=[]),)
+
+    async def atick(
+        self,
+        tasks: Iterable[PregelExecutableTask],
+        *,
+        reraise: bool = True,
+        timeout: float | None = None,
+        retry_policy: Sequence[RetryPolicy] | None = None,
+        get_waiter: Callable[[], asyncio.Future[None]] | None = None,
+        schedule_task: Callable[
+            [PregelExecutableTask, int, Call | None],
+            Awaitable[PregelExecutableTask | None],
+        ],
+    ) -> AsyncIterator[None]:
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        tasks = tuple(tasks)
+        futures = FuturesDict(
+            callback=weakref.WeakMethod(self.commit),
+            event=asyncio.Event(),
+            future_type=asyncio.Future,
+        )
+        # give control back to the caller
+        yield
+        # fast path if single task with no waiter and no timeout
+        if len(tasks) == 0:
+            return
+        elif len(tasks) == 1 and get_waiter is None and timeout is None:
+            t = tasks[0]
+            try:
+>               await arun_with_retry(
+                    t,
+                    retry_policy,
+                    stream=self.use_astream,
+                    configurable={
+                        CONFIG_KEY_CALL: partial(
+                            _acall,
+                            weakref.ref(t),
+                            stream=self.use_astream,
+                            retry_policy=retry_policy,
+                            futures=weakref.ref(futures),
+                            schedule_task=schedule_task,
+                            submit=self.submit,
+                            loop=loop,
+                        ),
+                    },
+                )
+
+.venv\Lib\site-packages\langgraph\pregel\_runner.py:304: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+task = PregelExecutableTask(name='response', input={'messages': [{'role': 'user', 'content': 'I have a headache and slight fe...ic=[]), ChannelWriteEntry(channel='branch:to:save_history', value=None, skip_none=False, mapper=None)))], subgraphs=[])
+retry_policy = None, stream = False, match_cached_writes = None
+configurable = {'__pregel_call': functools.partial(<function _acall at 0x000001BAB2055B20>, <weakref at 0x000001BAD9186D90; to 'Prege... to 'AsyncBackgroundExecutor' at 0x000001BAD916C8D0>, loop=<ProactorEventLoop running=False closed=False debug=False>)}
+
+    async def arun_with_retry(
+        task: PregelExecutableTask,
+        retry_policy: Sequence[RetryPolicy] | None,
+        stream: bool = False,
+        match_cached_writes: Callable[[], Awaitable[Sequence[PregelExecutableTask]]]
+        | None = None,
+        configurable: dict[str, Any] | None = None,
+    ) -> None:
+        """Run a task asynchronously with retries."""
+        retry_policy = task.retry_policy or retry_policy
+        attempts = 0
+        config = task.config
+        if configurable is not None:
+            config = patch_configurable(config, configurable)
+        if match_cached_writes is not None and task.cache_key is not None:
+            for t in await match_cached_writes():
+                if t is task:
+                    # if the task is already cached, return
+                    return
+        while True:
+            try:
+                # clear any writes from previous attempts
+                task.writes.clear()
+                # run the task
+                if stream:
+                    async for _ in task.proc.astream(task.input, config):
+                        pass
+                    # if successful, end
+                    break
+                else:
+>                   return await task.proc.ainvoke(task.input, config)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.venv\Lib\site-packages\langgraph\pregel\_retry.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <langgraph._internal._runnable.RunnableSeq object at 0x000001BAD894D950>
+input = {'audio_url': '', 'final_response': 'Possible rash.\\n\\n\u26a0\ufe0f Disclaimer: This is an automated visual analysis. It does NOT replace a clinical examination by a doctor.', 'followup_count': 0, 'image_input': None, ...}
+config = {'callbacks': <langchain_core.callbacks.manager.AsyncCallbackManager object at 0x000001BAD894CC10>, 'configurable': {'...0c18be919fd', 'langgraph_node': 'response', 'langgraph_path': ('__pregel_pull', 'response'), 'langgraph_step': 8, ...}}
+kwargs = {}
+callback_manager = <langchain_core.callbacks.manager.AsyncCallbackManager object at 0x000001BAD894D790>
+run_manager = <langchain_core.callbacks.manager.AsyncCallbackManagerForChainRun object at 0x000001BAD894E550>
+i = 0
+step = response(tags=None, recurse=True, explode_args=False, func_accepts={})
+run = None, context = <_contextvars.Context object at 0x000001BAD61B1640>
+
+    async def ainvoke(
+        self,
+        input: Input,
+        config: RunnableConfig | None = None,
+        **kwargs: Any | None,
+    ) -> Any:
+        if config is None:
+            config = ensure_config()
+        # setup callbacks
+        callback_manager = get_async_callback_manager_for_config(config)
+        # start the root run
+        run_manager = await callback_manager.on_chain_start(
+            None,
+            self.trace_inputs(input) if self.trace_inputs is not None else input,
+            name=config.get("run_name") or self.get_name(),
+            run_id=config.pop("run_id", None),
+        )
+    
+        # invoke all steps in sequence
+        try:
+            for i, step in enumerate(self.steps):
+                # mark each step as a child run
+                config = patch_config(
+                    config, callbacks=run_manager.get_child(f"seq:step:{i + 1}")
+                )
+                # 1st step is the actual node,
+                # others are writers which don't need to be run in context
+                if i == 0:
+                    if ASYNCIO_ACCEPTS_CONTEXT:
+                        # get the run object
+                        for h in run_manager.handlers:
+                            if isinstance(h, LangChainTracer):
+                                run = h.run_map.get(str(run_manager.run_id))
+                                break
+                        else:
+                            run = None
+                        # run in context
+                        with set_config_context(config, run) as context:
+>                           input = await asyncio.create_task(
+                                step.ainvoke(input, config, **kwargs), context=context
+                            )
+
+.venv\Lib\site-packages\langgraph\_internal\_runnable.py:705: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = response(tags=None, recurse=True, explode_args=False, func_accepts={})
+input = {'audio_url': '', 'final_response': 'Possible rash.\\n\\n\u26a0\ufe0f Disclaimer: This is an automated visual analysis. It does NOT replace a clinical examination by a doctor.', 'followup_count': 0, 'image_input': None, ...}
+config = {'callbacks': <langchain_core.callbacks.manager.AsyncCallbackManager object at 0x000001BAD894CC10>, 'configurable': {'...0c18be919fd', 'langgraph_node': 'response', 'langgraph_path': ('__pregel_pull', 'response'), 'langgraph_step': 8, ...}}
+kwargs = {}
+args = ({'audio_url': '', 'final_response': 'Possible rash.\\n\\n\u26a0\ufe0f Disclaimer: This is an automated visual analysis. It does NOT replace a clinical examination by a doctor.', 'followup_count': 0, 'image_input': None, ...},)
+runtime = Runtime(context=None, store=None, stream_writer=<function Pregel.astream.<locals>.stream_writer at 0x000001BAD89A8720>, previous=None)
+
+    async def ainvoke(
+        self, input: Any, config: RunnableConfig | None = None, **kwargs: Any
+    ) -> Any:
+        if not self.afunc:
+            return self.invoke(input, config)
+        if config is None:
+            config = ensure_config()
+        if self.explode_args:
+            args, _kwargs = input
+            kwargs = {**self.kwargs, **_kwargs, **kwargs}
+        else:
+            args = (input,)
+            kwargs = {**self.kwargs, **kwargs}
+    
+        runtime = config.get(CONF, {}).get(CONFIG_KEY_RUNTIME)
+    
+        for kw, (runtime_key, default) in self.func_accepts.items():
+            # If the kwarg has already been set, use the set value
+            if kw in kwargs:
+                continue
+    
+            kw_value: Any = MISSING
+            if kw == "config":
+                kw_value = config
+            elif runtime:
+                if kw == "runtime":
+                    kw_value = runtime
+                else:
+                    try:
+                        kw_value = getattr(runtime, runtime_key)
+                    except AttributeError:
+                        pass
+            if kw_value is MISSING:
+                if default is inspect.Parameter.empty:
+                    raise ValueError(
+                        f"Missing required config key '{runtime_key}' for '{self.name}'."
+                    )
+                kw_value = default
+            kwargs[kw] = kw_value
+    
+        if self.trace:
+            callback_manager = get_async_callback_manager_for_config(config, self.tags)
+            run_manager = await callback_manager.on_chain_start(
+                None,
+                input,
+                name=config.get("run_name") or self.name,
+                run_id=config.pop("run_id", None),
+            )
+            try:
+                child_config = patch_config(config, callbacks=run_manager.get_child())
+                coro = cast(Coroutine[None, None, Any], self.afunc(*args, **kwargs))
+                if ASYNCIO_ACCEPTS_CONTEXT:
+                    for h in run_manager.handlers:
+                        if isinstance(h, LangChainTracer):
+                            run = h.run_map.get(str(run_manager.run_id))
+                            break
+                    else:
+                        run = None
+                    with set_config_context(child_config, run) as context:
+                        ret = await asyncio.create_task(coro, context=context)
+                else:
+                    ret = await coro
+            except BaseException as e:
+                await run_manager.on_chain_error(e)
+                raise
+            else:
+                await run_manager.on_chain_end(ret)
+        else:
+>           ret = await self.afunc(*args, **kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.venv\Lib\site-packages\langgraph\_internal\_runnable.py:473: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+executor_or_config = None, func = <function response_node at 0x000001BAB206F9C0>
+args = ({'audio_url': '', 'final_response': 'Possible rash.\\n\\n\u26a0\ufe0f Disclaimer: This is an automated visual analysis. It does NOT replace a clinical examination by a doctor.', 'followup_count': 0, 'image_input': None, ...},)
+kwargs = {}
+wrapper = <function run_in_executor.<locals>.wrapper at 0x000001BAD89AA660>
+
+    async def run_in_executor(
+        executor_or_config: Executor | RunnableConfig | None,
+        func: Callable[P, T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        """Run a function in an executor.
+    
+        Args:
+            executor_or_config: The executor or config to run in.
+            func: The function.
+            *args: The positional arguments to the function.
+            **kwargs: The keyword arguments to the function.
+    
+        Returns:
+            The output of the function.
+        """
+    
+        def wrapper() -> T:
+            try:
+                return func(*args, **kwargs)
+            except StopIteration as exc:
+                # StopIteration can't be set on an asyncio.Future
+                # it raises a TypeError and leaves the Future pending forever
+                # so we need to convert it to a RuntimeError
+                raise RuntimeError from exc
+    
+        if executor_or_config is None or isinstance(executor_or_config, dict):
+            # Use default executor with context copied from current context
+>           return await asyncio.get_running_loop().run_in_executor(
+                None,
+                cast("Callable[..., T]", partial(copy_context().run, wrapper)),
+            )
+
+.venv\Lib\site-packages\langchain_core\runnables\config.py:627: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = None
+
+    def run(self):
+        if not self.future.set_running_or_notify_cancel():
+            return
+    
+        try:
+>           result = self.fn(*self.args, **self.kwargs)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C:\Users\lenovo\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\concurrent\futures\thread.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def wrapper() -> T:
+        try:
+>           return func(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^
+
+.venv\Lib\site-packages\langchain_core\runnables\config.py:618: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+state = {'audio_url': '', 'final_response': 'Possible rash.\\n\\n\u26a0\ufe0f Disclaimer: This is an automated visual analysis. It does NOT replace a clinical examination by a doctor.', 'followup_count': 0, 'image_input': None, ...}
+
+    def response_node(state: TriageState) -> TriageState:
+        """
+        Formats the validated response into a final deliverable output.
+    
+        No LLM calls. Pure string formatting and state assembly.
+    
+        Args:
+            state: Contains validated_response, nutrition data, risk data.
+    
+        Returns:
+            TriageState: With final_response populated and appended to messages.
+        """
+        next_action = state.get("next_action", "")
+    
+        # \u2500\u2500 Case 1: Follow-up in progress \u2014 nothing to format \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        if next_action == "ask_followup":
+            state["final_response"] = ""
+            return state
+    
+        # \u2500\u2500 Case 2: Priority interrupt \u2014 already handled by llm_brain \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        if next_action == "priority_interrupt":
+            # The emergency message is already in messages from llm_brain
+            messages = state.get("messages", [])
+            if messages:
+                state["final_response"] = messages[-1].get("content", "")
+            return state
+    
+        # \u2500\u2500 Case 3: Standard response formatting \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        validated = state.get("validated_response", "")
+    
+        # If no validated_response, use the last assistant message
+        if not validated:
+            messages = state.get("messages", [])
+            assistant_msgs = [m for m in messages if m.get("role") == "assistant"]
+            if assistant_msgs:
+                validated = assistant_msgs[-1].get("content", "")
+    
+        # \u2500\u2500 Build final structured output \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        final = validated
+    
+        # Ensure disclaimer is present (llm_brain already adds DISCLAIMER: section;
+        # this guard is only for paths where llm_brain didn't run, e.g. vision)
+        if "disclaimer" not in final.lower() and "Disclaimer" not in final:
+            final += (
+                "\nDISCLAIMER: This is a triage tool only, NOT a medical diagnosis. "
+                "Always consult a licensed physician."
+            )
+    
+        state["final_response"] = final
+    
+        # Update the last assistant message with the formatted version
+        messages = state.get("messages", [])
+        if messages:
+            # Find and update the last assistant message
+            for i in range(len(messages) - 1, -1, -1):
+                if messages[i].get("role") == "assistant":
+                    messages[i]["content"] = final
+                    break
+            else:
+                # No assistant message found ù append one
+                messages.append({"role": "assistant", "content": final})
+    
+        log_event(logger, "response_formatted",
+>                 has_nutrition_image=bool(nutrition_image),
+                                           ^^^^^^^^^^^^^^^
+                  response_length=len(final))
+E       NameError: name 'nutrition_image' is not defined
+E       During task with name 'response' and id 'd3a7e923-454b-6bd6-e52c-60c18be919fd'
+
+backend\src\nodes\response_node.py:106: NameError
+---------------------------- Captured stderr call -----------------------------
+{"timestamp": "2026-02-26T16:19:20.461639+00:00", "level": "INFO", "module": "", "message": "session_created", "data": {"session_id": "vision-session-abc"}}
+{"timestamp": "2026-02-26T16:19:20.463697+00:00", "level": "INFO", "module": "", "message": "intent_classified", "data": {"intent": "body_image", "source": "input_mode_image"}}
+{"timestamp": "2026-02-26T16:19:20.465432+00:00", "level": "INFO", "module": "", "message": "vision_analysis_completed", "data": {"type": "skin", "confidence": 0.8}}
+{"timestamp": "2026-02-26T16:19:20.466591+00:00", "level": "INFO", "module": "", "message": "vision_explained", "data": {"type": "skin", "confidence": 0.8}}
+{"timestamp": "2026-02-26T16:19:20.467488+00:00", "level": "INFO", "module": "", "message": "judge_validated", "data": {"result": "pass", "regeneration_count": 0}}
+{"timestamp": "2026-02-26T16:19:20.468994+00:00", "level": "INFO", "module": "", "message": "nutrition_generated", "data": {"risk_level": "low", "has_image": false}}
+------------------------------ Captured log call ------------------------------
+INFO     triguard.load_session::0 session_created
+INFO     triguard.classification::0 intent_classified
+INFO     triguard.medical_vision::0 vision_analysis_completed
+INFO     triguard.llm_brain::0 vision_explained
+INFO     triguard.judge_validator::0 judge_validated
+WARNING  triguard.groq_llama:groq_llama_tool.py:50 GROQ_API_KEY not set ù skipping LLaMA call.
+INFO     triguard.nutrition::0 nutrition_generated
+_________________ test_standard_response_appended_to_messages _________________
+
+mock_llama = <MagicMock name='call_llama' id='1902019635344'>
+
+    @patch(MOCK_LLAMA)
+    def test_standard_response_appended_to_messages(mock_llama):
+        """Standard non-emergency, non-vision path generates and appends a response."""
+        mock_llama.return_value = "\U0001fa7a Summary: Mild fever noted."
+        state = make_state(
+            symptoms=["fever"],
+            risk_level="low",
+            risk_score=2.0,
+            retrieved_info=["Fever often resolves with rest."],
+        )
+    
+        from backend.src.nodes.llm_brain_node import llm_brain_node
+        result = run(llm_brain_node(state))
+    
+        assistant_msgs = [m for m in result["messages"] if m["role"] == "assistant"]
+        assert len(assistant_msgs) >= 1
+>       assert "Disclaimer" in assistant_msgs[-1]["content"]
+E       AssertionError: assert 'Disclaimer' in '\U0001fa7a Summary: Mild fever noted.\\nDISCLAIMER: This is a triage tool only, NOT a medical diagnosis. Always consult a licensed physician for personal medical advice.'
+
+backend\tests\test_llm_brain_node.py:36: AssertionError
+---------------------------- Captured stderr call -----------------------------
+{"timestamp": "2026-02-26T16:19:20.586101+00:00", "level": "INFO", "module": "", "message": "response_generated", "data": {"risk_level": "low", "language": "en", "response_length": 158}}
+------------------------------ Captured log call ------------------------------
+INFO     triguard.llm_brain::0 response_generated
+=========================== short test summary info ===========================
+FAILED backend/tests/test_graph_integration.py::test_text_pipeline_full_flow
+FAILED backend/tests/test_graph_integration.py::test_vision_pipeline_full_flow
+FAILED backend/tests/test_llm_brain_node.py::test_standard_response_appended_to_messages
+========================= 3 failed, 6 passed in 6.84s =========================

@@ -153,10 +153,15 @@ async def medical_vision_node(state: TriageState) -> TriageState:
 
     # ── Standard body/skin/xray image path ────────────────────────────────────
     findings = {
-        "image_type":      image_type,
-        "visual_findings": vision_results.get("visual_findings", []),
-        "confidence":      confidence,
-        "explanation":     vision_results.get("explanation", ""),
+        "image_type":         image_type,
+        "visual_findings":    vision_results.get("visual_findings", []),
+        "lesion_morphology":  vision_results.get("lesion_morphology"),
+        "color_description":  vision_results.get("color_description"),
+        "distribution":       vision_results.get("distribution"),
+        "severity":           vision_results.get("severity"),
+        "possible_conditions": vision_results.get("possible_conditions", []),
+        "confidence":         confidence,
+        "explanation":        vision_results.get("explanation", ""),
     }
 
     state["vision_findings"] = findings

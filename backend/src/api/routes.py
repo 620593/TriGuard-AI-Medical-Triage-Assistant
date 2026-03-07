@@ -6,6 +6,7 @@ Processes images IN-MEMORY only (No Cloudinary).
 Safety: Strict User ID validation and secure in-memory buffers.
 """
 
+import asyncio
 import os
 import re
 import tempfile
@@ -14,7 +15,9 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Header, Request
 from pydantic import BaseModel, Field, field_validator
 from backend.src.logging.logger import get_logger, log_event, LatencyTracker
-from backend.src.tools.mongodb_tool import list_user_sessions, list_user_reports, delete_user_report
+from backend.src.tools.mongodb_tool import (
+    list_user_sessions, list_user_reports, delete_user_report, create_session
+)
 from backend.src.tools.whisper_tool import transcribe_audio
 from backend.src.tools.tts_tool import text_to_speech
 from backend.src.tools.output_parser import parse_response
@@ -33,8 +36,23 @@ def _validate_uid_string(uid: str) -> bool:
 
 # ── Dependency ──────────────────────────────────────────────────────────────
 
-async def get_current_user_id(x_user_id: Optional[str] = Header(None)) -> str:
-    """Validates User ID from Request Headers, defaults to 'anonymous' if missing."""
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Header, Request, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from backend.src.tools.security import decode_access_token
+
+security = HTTPBearer(auto_error=False)
+
+async def get_current_user_id(
+    x_user_id: Optional[str] = Header(None),
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> str:
+    """Validates User ID from JWT token or fallback to X-User-ID header, defaults to 'anonymous' if missing."""
+    if auth and auth.credentials:
+        payload = decode_access_token(auth.credentials)
+        if payload and "sub" in payload:
+            return payload["sub"]
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+    
     if not x_user_id:
         return "anonymous"
     if not _validate_uid_string(x_user_id):
@@ -106,10 +124,12 @@ def _is_valid_audio_bytes(data: bytes) -> bool:
 # ── Helper ──────────────────────────────────────────────────────────────────
 
 def _build_initial_state(msg: str, mode: str, sid: str, uid: str, lang: str,
-                         use_history: bool = False) -> dict:
+                         use_history: bool = False,
+                         new_session: bool = False) -> dict:
     return {
         "messages": [{"role": "user", "content": msg}],
         "symptoms": [],
+        "last_symptoms": [],
         "risk_level": "low",
         "risk_score": 0.0,
         "session_id": sid,
@@ -120,26 +140,61 @@ def _build_initial_state(msg: str, mode: str, sid: str, uid: str, lang: str,
         "vision_findings": {},
         "next_action": "",
         "judge_passed": True,
-        "use_history": use_history,   # Controls history merge in load_history/session nodes
+        "use_history": use_history,
+        "new_session": new_session,
         "judge_feedback": "",
         "audio_url": "",
+        "session_memory": "",
+        # voice_response_required is set for voice mode so the TTS graph node fires
+        "voice_response_required": mode == "voice",
     }
 
 # ── Endpoints ───────────────────────────────────────────────────────────────
 
 @router.post("/triage", response_model=TriageResponse)
-async def triage_endpoint(request: TriageRequest, req: Request):
+async def triage_endpoint(
+    request: TriageRequest, 
+    req: Request,
+    current_user_id: str = Depends(get_current_user_id)
+):
     """Main text-based triage endpoint."""
     try:
+        # ── Effective user ID ────────────────────────────────────────────────
+        effective_user_id = (
+            current_user_id
+            if current_user_id != "anonymous"
+            else normalize_user_id(request.user_id)
+        )
+
+        # ── Session management ───────────────────────────────────────────────
+        # If no session_id in request → this is the first turn → create a new session.
+        # If session_id present → continue existing session, ALWAYS load history.
+        is_new_session = not bool(request.session_id)
+        effective_session_id = request.session_id or ""
+
+        if is_new_session:
+            # Create a fresh MongoDB session and return its ID to the frontend.
+            try:
+                effective_session_id = await create_session(
+                    user_id=effective_user_id,
+                    initial_state={"user_id": effective_user_id, "language": request.language or "en"},
+                )
+            except Exception as e:
+                logger.warning(f"MongoDB session creation failed (continuing without): {e}")
+                effective_session_id = str(uuid.uuid4())  # fallback UUID
+
         state = _build_initial_state(
             request.message,
             "text",
-            request.session_id or "",
-            request.user_id or "anonymous",
+            effective_session_id,
+            effective_user_id,
             request.language or "en",
-            use_history=request.use_history,  # opt-in history merge
+            # use_history: always True when continuing a session; respects flag on new sessions
+            use_history=True if not is_new_session else request.use_history,
+            # new_session: signals load_history_node to skip loading (nothing saved yet)
+            new_session=is_new_session,
         )
-        
+
         app_graph = req.app.state.graph
         result = await app_graph.ainvoke(state)
         assistant_msgs = [m for m in result.get("messages", []) if m.get("role") == "assistant"]
@@ -149,7 +204,8 @@ async def triage_endpoint(request: TriageRequest, req: Request):
         parsed = parse_response(raw_response)
 
         return TriageResponse(
-            session_id=result.get("session_id", ""),
+            # Always return the session_id — frontend stores it for subsequent turns
+            session_id=result.get("session_id", effective_session_id),
             response=raw_response,
             risk_level=result.get("risk_level", "low"),
             parsed_response=parsed,
@@ -186,7 +242,8 @@ async def image_endpoint(
     session_id: Optional[str] = Form(None),
     language: Optional[str] = Form("en"),
     image_type_hint: Optional[str] = Form(None),  # 'report' | 'prescription' | 'document' | 'body'
-    req: Request = None
+    req: Request = None,
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """Processes medical images IN-MEMORY. Supports body images and medical documents.
     
@@ -195,7 +252,7 @@ async def image_endpoint(
       - 'body' | None → Medical vision pipeline
     """
     try:
-        valid_uid = normalize_user_id(user_id)
+        valid_uid = current_user_id if current_user_id != "anonymous" else normalize_user_id(user_id)
 
         # Security: Limit file size to 10MB
         MAX_SIZE = 10 * 1024 * 1024
@@ -244,11 +301,12 @@ async def xray_endpoint(
     user_id: str = Form("anonymous"),
     session_id: Optional[str] = Form(None),
     language: Optional[str] = Form("en"),
-    req: Request = None
+    req: Request = None,
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """X-Ray analysis endpoint. Always routes through the xray pipeline."""
     try:
-        valid_uid = normalize_user_id(user_id)
+        valid_uid = current_user_id if current_user_id != "anonymous" else normalize_user_id(user_id)
 
         MAX_SIZE = 10 * 1024 * 1024
         content = await image.read(MAX_SIZE + 1)
@@ -291,7 +349,8 @@ class VoiceResponse(BaseModel):
     transcription: str
     response: str
     risk_level: str
-    audio_url: str
+    audio_url: str        # Full URL: http://host/static/audio/<filename>  (empty if TTS failed)
+    audio_path: str       # Filename only: triage_abc123.mp3  (for client-side URL construction)
 
 
 @router.post("/voice", response_model=VoiceResponse)
@@ -300,11 +359,12 @@ async def voice_endpoint(
     user_id: str = Form("anonymous"),
     session_id: Optional[str] = Form(None),
     language: Optional[str] = Form("en"),
-    req: Request = None
+    req: Request = None,
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """Voice triage endpoint: transcribes audio and returns triage response."""
     try:
-        valid_uid = normalize_user_id(user_id)
+        valid_uid = current_user_id if current_user_id != "anonymous" else normalize_user_id(user_id)
 
         MAX_AUDIO_SIZE = 10 * 1024 * 1024  # 10 MB
         CHUNK_SIZE     = 65_536            # 64 KB streaming chunks
@@ -361,22 +421,26 @@ async def voice_endpoint(
         assistant_msgs = [m for m in result.get("messages", []) if m.get("role") == "assistant"]
         response_text  = assistant_msgs[-1]["content"] if assistant_msgs else "No response generated."
 
-        # Generate TTS audio response
+        # ── Generate TTS audio response ─────────────────────────────────────────
+        # text_to_speech() returns a filename (e.g. "triage_abc123.mp3") written
+        # to backend/audio_output/ which is mounted at /static/audio/ in main.py.
         audio_filename = await asyncio.to_thread(text_to_speech, response_text, detected_lang)
 
-        # Build full static URL using the actual server base URL (portable across environments)
+        # Build the full static URL so the browser can fetch the file directly.
+        # main.py mounts: app.mount("/static/audio", StaticFiles(directory=audio_output))
         if audio_filename:
             base = str(req.base_url).rstrip("/")
-            audio_url = f"{base}/static/audio/{audio_filename}"
+            full_audio_url = f"{base}/static/audio/{audio_filename}"
         else:
-            audio_url = ""
+            full_audio_url = ""
 
         return VoiceResponse(
             session_id=result.get("session_id", ""),
             transcription=transcribed_text,
             response=response_text,
             risk_level=result.get("risk_level", "low"),
-            audio_url=audio_url,
+            audio_url=full_audio_url,
+            audio_path=audio_filename or "",
         )
     except HTTPException:
         raise

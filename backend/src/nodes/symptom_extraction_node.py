@@ -1,9 +1,16 @@
 """
-symptom_extraction_node.py  (Version 3)
+symptom_extraction_node.py  (Version 4 — Question-Aware Extraction)
 -----------------------------------------
 LLaMA-based symptom extraction with multilingual support.
 
-V3 changes:
+V4 changes:
+    - Now handles two input types:
+        1. Symptom descriptions: "I have fever and headache" → extracts symptoms
+        2. Medical questions: "what causes back pain?" → extracts medical topics
+      Both types populate state["symptoms"] so disease_retrieval and Tavily fire.
+    - Prevents the pipeline from short-circuiting on question-type inputs.
+
+V3 changes (preserved):
     - Detects language from user input.
     - Translates non-English input to English for symptom extraction.
     - Stores original language in state for response translation.
@@ -20,7 +27,11 @@ logger = get_logger("symptom_extraction")
 
 async def symptom_extraction_node(state: TriageState) -> TriageState:
     """
-    Extracts symptoms from user input with language detection.
+    Extracts symptoms or medical topics from user input with language detection.
+
+    V4: If the input is a medical question (not a symptom description),
+    extracts the medical topic keywords so downstream nodes have context to
+    retrieve relevant disease/medical info from the knowledge base.
 
     Args:
         state: Contains conversation messages.
@@ -35,12 +46,7 @@ async def symptom_extraction_node(state: TriageState) -> TriageState:
     latest_input = user_messages[-1]
     state["original_input"] = latest_input
 
-    # ── Step 1: Language detection (skip if already explicitly provided) ───────
-    # The route always sets state["language"] (default 'en').
-    # Only run the extra LLM call if the input might be non-English AND
-    # the language hasn't been determined yet by a prior step (e.g. voice).
-    # Trigger detection only if lang code is absent or set to default 'en'
-    # AND the input contains non-ASCII characters (likely non-English).
+    # ── Step 1: Language detection ──────────────────────────────────────────────
     current_lang = state.get("language", "")
     input_has_non_ascii = any(ord(c) > 127 for c in latest_input)
     needs_detection = (not current_lang or current_lang == "en") and input_has_non_ascii
@@ -71,22 +77,30 @@ async def symptom_extraction_node(state: TriageState) -> TriageState:
         if translated:
             english_input = translated
 
-    # ── Step 3: Extract symptoms from English text ──────────────────────────────
+    # ── Step 3: Extract symptoms OR medical topics ──────────────────────────────
+    # V4: Single prompt handles both symptom descriptions and medical questions.
+    # For questions, extracts the medical topic(s) so downstream nodes fire.
     prompt = (
-        "You are a medical symptom extractor. Your ONLY job is to list the symptoms "
-        "mentioned by the patient. Do NOT add, infer, or invent symptoms.\n\n"
-        "Output a comma-separated list of symptom phrases. "
-        "If no symptoms are mentioned, output: none\n\n"
+        "You are a medical information extractor. Given the patient input below, extract:\n"
+        "- If the patient DESCRIBES symptoms (e.g. 'I have fever'): list the symptom keywords.\n"
+        "- If the patient ASKS A QUESTION about a medical topic (e.g. 'what causes headaches?', "
+        "'is fever dangerous?', 'tell me about diabetes'): list the medical topic keywords.\n\n"
+        "Output a comma-separated list of medical keyword phrases (max 5).\n"
+        "Do NOT add, infer, or invent anything not mentioned.\n"
+        "If completely unrelated to health/medicine, output: none\n\n"
         f"Patient input: {english_input}\n\n"
-        "Symptoms:"
+        "Medical keywords:"
     )
 
-    raw = await asyncio.to_thread(call_llama, prompt, max_tokens=100)
+    raw = await asyncio.to_thread(call_llama, prompt, max_tokens=120)
 
     if not raw or raw.strip().lower() == "none":
         return state
 
-    extracted = [s.strip().lower() for s in raw.split(",") if s.strip()]
+    extracted = [s.strip().lower() for s in raw.split(",") if s.strip() and len(s.strip()) > 2]
+
+    if not extracted:
+        return state
 
     # Merge with existing symptoms (union, no duplicates)
     existing = set(state.get("symptoms", []))

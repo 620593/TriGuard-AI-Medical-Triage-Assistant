@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 # Set env vars before any app import
 os.environ.setdefault("GROQ_API_KEY", "test-groq-key")
 os.environ.setdefault("MONGODB_URI", "mongodb://localhost:27017")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-12345678901234567890")
 
 
 def _make_mock_result(risk="low", response="🩺 Test response.", session="test-session"):

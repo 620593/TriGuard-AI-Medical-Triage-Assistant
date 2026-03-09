@@ -108,6 +108,21 @@ def test_triage_missing_message_rejected(client):
 
 # ── /image ────────────────────────────────────────────────────────────────
 
+@patch("backend.src.api.routes.Image.open")
+def test_image_endpoint_rejects_decompression_bomb(mock_image_open, client):
+    """Image endpoint rejects potential decompression bombs by pre-verifying dimensions."""
+    from PIL import Image
+    mock_image_open.side_effect = Image.DecompressionBombError("Image size exceeds limit.")
+
+    small_image = b"\xff\xd8\xff\xe0" + b"\x00" * 50
+    resp = client.post(
+        "/api/v3/image",
+        files={"image": ("test.jpg", small_image, "image/jpeg")},
+        data={"user_id": "test-user"},
+    )
+    assert resp.status_code == 400
+    assert "Decompression Bomb protection" in resp.json()["detail"]
+
 def test_image_endpoint_rejects_oversized_file(client):
     """Image endpoint rejects files >10MB with 413 Request Entity Too Large."""
     big_file = b"\xff\xd8\xff" + b"\x00" * (10 * 1024 * 1024 + 10)

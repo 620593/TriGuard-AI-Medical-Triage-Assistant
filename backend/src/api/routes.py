@@ -9,11 +9,16 @@ Safety: Strict User ID validation and secure in-memory buffers.
 import asyncio
 import os
 import re
+import io
 import tempfile
 import uuid
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Header, Request
 from pydantic import BaseModel, Field, field_validator
+from PIL import Image
+
+# Secure Pillow globally against Decompression Bomb DOS attacks
+Image.MAX_IMAGE_PIXELS = 89478485
 from backend.src.logging.logger import get_logger, log_event, LatencyTracker
 from backend.src.tools.mongodb_tool import (
     list_user_sessions, list_user_reports, delete_user_report, create_session
@@ -266,6 +271,16 @@ async def image_endpoint(
             if not content.startswith(b"%PDF"):
                 raise HTTPException(status_code=400, detail="Invalid file type. Only images and PDF documents are allowed.")
 
+        # Prevent Decompression Bombs by pre-verifying image dimensions with Pillow
+        if not content.startswith(b"%PDF"):
+            try:
+                with Image.open(io.BytesIO(content)) as img:
+                    img.verify()
+            except Image.DecompressionBombError:
+                raise HTTPException(status_code=400, detail="Image dimensions exceed the allowed limit (Decompression Bomb protection).")
+            except Exception:
+                pass  # Ignore other errors, they will be handled by the pipeline
+
         # Build initial state — input_mode='image', pass hint for classification
         state = _build_initial_state(
             "Analyze this medical image",
@@ -315,6 +330,14 @@ async def xray_endpoint(
 
         if not _is_valid_image_bytes(content):
             raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed for X-ray analysis.")
+
+        try:
+            with Image.open(io.BytesIO(content)) as img:
+                img.verify()
+        except Image.DecompressionBombError:
+            raise HTTPException(status_code=400, detail="Image dimensions exceed the allowed limit (Decompression Bomb protection).")
+        except Exception:
+            pass  # Ignore other errors, they will be handled by the pipeline
 
         # Always build state as mode='xray' — never delegates to image_endpoint
         state = _build_initial_state(

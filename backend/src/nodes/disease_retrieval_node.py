@@ -15,6 +15,8 @@ V5 changes:
     Result: eliminated one full Tavily round-trip (~300–800ms saved per request).
 """
 
+import re
+
 from backend.src.state.state import TriageState
 from backend.src.logging.logger import get_logger, log_event
 
@@ -58,6 +60,12 @@ _SYMPTOM_DISEASE_MAP: dict[str, list[str]] = {
     "insomnia":       ["Sleep disorder", "Anxiety", "Depression", "Sleep apnea"],
 }
 
+# Precompile a regex to match any of the keywords for fast multiple substring search.
+# Keys are sorted by length descending so that longer overlapping keywords (e.g. "loose motion")
+# match before their shorter substrings ("loose").
+_SORTED_KEYWORDS = sorted(_SYMPTOM_DISEASE_MAP.keys(), key=len, reverse=True)
+_SYMPTOM_PATTERN = re.compile('|'.join(re.escape(k) for k in _SORTED_KEYWORDS))
+
 
 async def disease_retrieval_node(state: TriageState) -> TriageState:
     """
@@ -76,18 +84,18 @@ async def disease_retrieval_node(state: TriageState) -> TriageState:
         log_event(logger, "disease_retrieval_skipped", reason="no_symptoms")
         return state
 
-    # Build candidate set via keyword matching (O(n×m), very fast)
+    # Build candidate set via regex search (O(n) scan per symptom, very fast)
     candidates: list[str] = []
     seen: set[str] = set()
 
     for symptom in symptoms:
         symptom_lower = symptom.lower()
-        for keyword, diseases in _SYMPTOM_DISEASE_MAP.items():
-            if keyword in symptom_lower:
-                for disease in diseases:
-                    if disease not in seen:
-                        seen.add(disease)
-                        candidates.append(disease)
+        for match in _SYMPTOM_PATTERN.finditer(symptom_lower):
+            keyword = match.group()
+            for disease in _SYMPTOM_DISEASE_MAP[keyword]:
+                if disease not in seen:
+                    seen.add(disease)
+                    candidates.append(disease)
 
     # Cap to top 6 candidates to keep downstream prompts lean
     state["disease_candidates"] = candidates[:6]

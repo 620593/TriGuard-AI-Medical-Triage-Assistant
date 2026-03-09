@@ -20,8 +20,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 def get_password_hash(password: str) -> str:
-    # passlib crashes on bcrypt 4.1.0+ because of an internal self-test wrap bug that feeds an 80 byte string
-    # We bypass passlib and use raw bcrypt here formatting to exact length
+    # We use raw bcrypt directly (formatting to exact length) instead of passlib,
+    # because passlib crashes on bcrypt 4.1.0+ due to an internal self-test wrap bug
+    # that feeds an 80 byte string.
     pwd_bytes = password.encode('utf-8')[:72]
     return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
 

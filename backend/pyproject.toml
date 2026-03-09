@@ -31,6 +31,6 @@ dependencies = [
     # ── V3: Gemini API (for nutrition_node) ─────────────────────
     "google-generativeai>=0.8.0",
     "pyjwt>=2.11.0",
-    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.1.0",
     "email-validator>=2.3.0",
 ]

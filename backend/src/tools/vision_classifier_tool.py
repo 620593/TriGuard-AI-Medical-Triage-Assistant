@@ -13,7 +13,7 @@ Performance: Async-safe with AsyncGroq.
          - API 400 bad request
          - Timeout / asyncio.TimeoutError
        All return structured safe fallback with confidence=0 + risk_level="unknown".
-    3. Dedicated _build_document_prompt() and _build_body_prompt() for testability.
+    3. Single unified prompt for ALL image types.
     4. VISION_API_TIMEOUT_SECONDS cap on all Groq calls.
 """
 
@@ -76,9 +76,7 @@ def _normalize_image_to_data_url(image_input: Any) -> str:
     raise ValueError(f"Unsupported image input type: {type(image_input)}")
 
 
-# 🔥 UPGRADE V5: Dedicated prompt builders for each image category (testable)
-
-def _build_body_prompt() -> str:
+def _build_unified_prompt() -> str:
     """
     # 🔥 UPGRADE V5 (P4.1 fix): Single unified prompt for ALL image types.
     Returns full document metadata fields when image_type=="document",
@@ -188,7 +186,7 @@ async def analyze_medical_image(image_input: Any) -> Dict[str, Any]:
                 messages=[{
                     "role": "user",
                     "content": [
-                        {"type": "text",      "text": _build_body_prompt()},
+                        {"type": "text",      "text": _build_unified_prompt()},
                         {"type": "image_url", "image_url": {"url": data_url}},
                     ],
                 }],

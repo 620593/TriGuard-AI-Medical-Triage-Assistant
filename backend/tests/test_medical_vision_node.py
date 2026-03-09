@@ -66,8 +66,14 @@ def test_oversized_image_rejected(mock_analyze):
 
 @patch(MOCK_ANALYZE, new_callable=AsyncMock)
 def test_vision_error_handled_gracefully(mock_analyze):
-    """If analyze_medical_image throws, node returns safe fallback findings."""
-    mock_analyze.side_effect = Exception("Model unavailable")
+    """If analyze_medical_image returns a fallback with 0 confidence, node returns safe fallback findings."""
+    mock_analyze.return_value = {
+        "image_type": "unknown",
+        "visual_findings": [],
+        "confidence": 0.0,
+        "risk_level": "unknown",
+        "explanation": "Model unavailable"
+    }
     state = make_state(image_input=b"\xff\xd8\xff" + b"\x00" * 50)
 
     from backend.src.nodes.medical_vision_node import medical_vision_node

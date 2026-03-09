@@ -1,8 +1,9 @@
 import uuid
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, EmailStr
 import os
 import httpx
+import secrets
 from fastapi.responses import RedirectResponse
 
 from backend.src.tools.mongodb_tool import get_user_by_email, create_user
@@ -75,12 +76,30 @@ async def login(req: LoginRequest):
 async def google_login():
     google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
     google_redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v3/auth/google/callback")
-    redirect_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={google_client_id}&redirect_uri={google_redirect_uri}&response_type=code&scope=openid email profile&access_type=offline"
-    return RedirectResponse(redirect_url)
+
+    # Generate CSRF state token
+    state = secrets.token_urlsafe(32)
+    redirect_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={google_client_id}&redirect_uri={google_redirect_uri}&response_type=code&scope=openid email profile&access_type=offline&state={state}"
+
+    response = RedirectResponse(redirect_url)
+    # Set the state in an HttpOnly cookie to verify during callback
+    response.set_cookie(
+        key="oauth_state",
+        value=state,
+        httponly=True,
+        samesite="lax",
+        secure=os.environ.get("TRIGUARD_ENV", "development") == "production"
+    )
+    return response
 
 
 @router.get("/google/callback")
-async def google_callback(code: str):
+async def google_callback(request: Request, code: str, state: str = None):
+    # Verify CSRF state
+    cookie_state = request.cookies.get("oauth_state")
+    if not cookie_state or not state or secrets.compare_digest(cookie_state, state) is False:
+        raise HTTPException(status_code=400, detail="Invalid state parameter. CSRF attempt suspected.")
+
     google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
     google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
     google_redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v3/auth/google/callback")
@@ -140,4 +159,6 @@ async def google_callback(code: str):
     safe_name = urllib.parse.quote(name)
     safe_uid = urllib.parse.quote(str(user_id))
     
-    return RedirectResponse(f"{frontend_url}/dashboard?token={jwt_token}&name={safe_name}&uid={safe_uid}")
+    response = RedirectResponse(f"{frontend_url}/dashboard?token={jwt_token}&name={safe_name}&uid={safe_uid}")
+    response.delete_cookie("oauth_state")
+    return response

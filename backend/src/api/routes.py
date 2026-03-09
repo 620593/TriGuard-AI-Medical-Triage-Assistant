@@ -43,21 +43,26 @@ from backend.src.tools.security import decode_access_token
 security = HTTPBearer(auto_error=False)
 
 async def get_current_user_id(
-    x_user_id: Optional[str] = Header(None),
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> str:
-    """Validates User ID from JWT token or fallback to X-User-ID header, defaults to 'anonymous' if missing."""
+    """Validates User ID from JWT token, defaults to 'anonymous' if missing."""
     if auth and auth.credentials:
         payload = decode_access_token(auth.credentials)
         if payload and "sub" in payload:
             return payload["sub"]
         raise HTTPException(status_code=401, detail="Invalid authentication token")
     
-    if not x_user_id:
-        return "anonymous"
-    if not _validate_uid_string(x_user_id):
-        raise HTTPException(status_code=400, detail="Invalid User ID format in header")
-    return x_user_id
+    return "anonymous"
+
+async def get_authenticated_user_id(
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> str:
+    """Validates User ID from JWT token, raises 401 if missing."""
+    if auth and auth.credentials:
+        payload = decode_access_token(auth.credentials)
+        if payload and "sub" in payload:
+            return payload["sub"]
+    raise HTTPException(status_code=401, detail="Invalid or missing authentication token")
 
 def normalize_user_id(uid: str) -> str:
     """Normalises a User ID: returns 'anonymous' for empty/anonymous values,
@@ -453,17 +458,17 @@ async def health():
     return {"status": "healthy", "version": "3.0.0", "mode": "in-memory-vision"}
 
 @router.get("/sessions")
-async def get_sessions(user_id: str = Depends(get_current_user_id)):
+async def get_sessions(user_id: str = Depends(get_authenticated_user_id)):
     """Lists current user active sessions."""
     return await list_user_sessions(user_id)
 
 @router.get("/reports")
-async def get_reports(user_id: str = Depends(get_current_user_id)):
+async def get_reports(user_id: str = Depends(get_authenticated_user_id)):
     """Lists current user triage reports."""
     return await list_user_reports(user_id)
 
 @router.delete("/reports/{report_id}")
-async def delete_report(report_id: str, user_id: str = Depends(get_current_user_id)):
+async def delete_report(report_id: str, user_id: str = Depends(get_authenticated_user_id)):
     """Deletes a specific user triage report."""
     success = await delete_user_report(report_id, user_id)
     if not success:

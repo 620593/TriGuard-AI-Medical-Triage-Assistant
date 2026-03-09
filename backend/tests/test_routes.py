@@ -8,6 +8,7 @@ Uses `app` directly with mocked app.state.graph — bypasses lifespan entirely.
 import os
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+from backend.src.tools.security import create_access_token
 
 # Set env vars before any app import
 os.environ.setdefault("GROQ_API_KEY", "test-groq-key")
@@ -135,24 +136,17 @@ def test_image_endpoint_rejects_invalid_user_id(client):
 @patch("backend.src.api.routes.list_user_sessions", new_callable=AsyncMock,
        return_value=[{"session_id": "abc", "created_at": "2026-01-01"}])
 def test_sessions_valid_user(mock_sessions, client):
-    """Sessions endpoint returns list for a valid user header."""
-    resp = client.get("/api/v3/sessions", headers={"x-user-id": "test-user"})
+    """Sessions endpoint returns list for a valid authenticated user."""
+    token = create_access_token({"sub": "test-user"})
+    resp = client.get("/api/v3/sessions", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
 
 
-@patch("backend.src.api.routes.list_user_sessions", new_callable=AsyncMock, return_value=[])
-def test_sessions_invalid_user_id_rejected(mock_sessions, client):
-    """Sessions endpoint rejects user IDs that fail regex validation."""
-    resp = client.get("/api/v3/sessions", headers={"x-user-id": "bad id!@#"})
-    assert resp.status_code == 400
-
-
-@patch("backend.src.api.routes.list_user_sessions", new_callable=AsyncMock, return_value=[])
-def test_sessions_no_header_returns_anonymous(mock_sessions, client):
-    """Sessions endpoint with no user header defaults to 'anonymous'."""
+def test_sessions_unauthenticated_rejected(client):
+    """Sessions endpoint rejects requests without a valid token."""
     resp = client.get("/api/v3/sessions")
-    assert resp.status_code == 200
+    assert resp.status_code == 401
 
 
 # ── /reports ─────────────────────────────────────────────────────────────
@@ -160,14 +154,14 @@ def test_sessions_no_header_returns_anonymous(mock_sessions, client):
 @patch("backend.src.api.routes.list_user_reports", new_callable=AsyncMock,
        return_value=[{"risk_level": "low", "session_id": "abc"}])
 def test_reports_valid_user(mock_reports, client):
-    """Reports endpoint returns a list for a valid user."""
-    resp = client.get("/api/v3/reports", headers={"x-user-id": "test-user"})
+    """Reports endpoint returns a list for a valid authenticated user."""
+    token = create_access_token({"sub": "test-user"})
+    resp = client.get("/api/v3/reports", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
 
 
-@patch("backend.src.api.routes.list_user_reports", new_callable=AsyncMock, return_value=[])
-def test_reports_invalid_user_rejected(mock_reports, client):
-    """Reports endpoint rejects invalid user IDs."""
-    resp = client.get("/api/v3/reports", headers={"x-user-id": "@@invalid"})
-    assert resp.status_code == 400
+def test_reports_unauthenticated_rejected(client):
+    """Reports endpoint rejects requests without a valid token."""
+    resp = client.get("/api/v3/reports")
+    assert resp.status_code == 401

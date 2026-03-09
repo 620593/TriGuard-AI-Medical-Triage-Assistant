@@ -1,17 +1,9 @@
 """
-ocr_tool.py  (Version 4)
+ocr_tool.py
 --------------------------
 Extracts text from uploaded images (prescriptions, lab reports, doctor notes).
 
 Uses pytesseract (Tesseract OCR engine) for reliable text extraction.
-
-V4 fix:
-    Previous signature only accepted a file path string.
-    ocr_scan_node passes raw bytes when image_input is in-memory (no temp file).
-    Added overloaded input: accepts both a file path (str) OR raw bytes.
-    This fixes the "ocr_empty_result: source=bytes" bug that caused the OCR
-    pipeline to return empty text, sending loose-motion reports through
-    the text pipeline with zero symptoms → LLM hallucinated "cold and fever".
 
 Anti-hallucination:
     This tool ONLY extracts text. It does not interpret, diagnose, or
@@ -40,7 +32,6 @@ def extract_text_from_image(source: Union[str, bytes], lang: str = "eng") -> str
     Accepts either:
       - A file path string (str): opens the file from disk.
       - Raw image bytes (bytes/bytearray): opens directly from memory.
-        This is the V4 fix — in-memory API pipelines never write a temp file.
 
     Args:
         source: Absolute file path OR raw image bytes (PNG, JPG, TIFF, WebP, BMP).
@@ -54,7 +45,6 @@ def extract_text_from_image(source: Union[str, bytes], lang: str = "eng") -> str
         return ""
 
     try:
-        # ── V4 Fix: handle both file paths and raw bytes ─────────────────────
         if isinstance(source, (bytes, bytearray)):
             # In-memory path: open directly from bytes buffer
             img = Image.open(io.BytesIO(source))

@@ -30,13 +30,25 @@ _RISK_TO_IDX = {r: i for i, r in enumerate(_RISK_ORDER)}
 
 @lru_cache(maxsize=1)
 def _load_rules() -> dict:
-    """Loads red_flag_rules.json once and caches the result."""
+    """Loads red_flag_rules.json once, lowercases keywords, and caches the result."""
     config_path = os.path.join(
         os.path.dirname(__file__), "..", "config", "red_flag_rules.json"
     )
     try:
         with open(os.path.normpath(config_path), "r", encoding="utf-8") as f:
-            return json.load(f)
+            rules = json.load(f)
+
+            # Pre-lowercase urgency_map keywords
+            urgency_map = rules.get("urgency_map", {})
+            for urgency, keywords in urgency_map.items():
+                urgency_map[urgency] = [kw.lower() for kw in keywords]
+
+            # Pre-lowercase escalation_rules match_any keywords
+            for rule in rules.get("escalation_rules", []):
+                if "match_any" in rule:
+                    rule["match_any"] = [kw.lower() for kw in rule["match_any"]]
+
+            return rules
     except Exception as exc:
         logger.warning("red_flag_rules.json not found or invalid: %s", exc)
         return {"escalation_rules": [], "urgency_map": {}}
@@ -59,7 +71,7 @@ def _determine_urgency(search_text: str, rules: dict) -> str:
     # Check in descending severity order
     for urgency in ("critical", "emergency", "urgent", "routine"):
         keywords = urgency_map.get(urgency, [])
-        if any(kw.lower() in search_text for kw in keywords):
+        if any(kw in search_text for kw in keywords):
             return urgency
     return "routine"
 
@@ -104,7 +116,7 @@ def red_flag_engine_node(state: TriageState) -> TriageState:
 
     for rule in escalation_rules:
         match_any: List[str] = rule.get("match_any", [])
-        if not any(kw.lower() in search_text for kw in match_any):
+        if not any(kw in search_text for kw in match_any):
             continue
 
         # Rule matched

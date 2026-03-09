@@ -79,10 +79,10 @@ def xray_analysis_node(state: TriageState) -> TriageState:
     if confidence == 0.0 and not raw_labels:
         state["xray_findings"] = _XRAY_FALLBACK_MSG
         state["image_input"] = None
-        state["messages"].append({
+        state["messages"] = state.get("messages", []) + [{
             "role": "assistant",
             "content": _XRAY_FALLBACK_MSG
-        })
+        }]
         log_event(logger, "xray_fallback_used", reason="empty_model_results")
         return state
 
@@ -125,9 +125,9 @@ def xray_analysis_node(state: TriageState) -> TriageState:
             state["risk_level"] = "moderate"
 
     # Add to conversation
-    state["messages"].append({
+    state["messages"] = state.get("messages", []) + [{
         "role": "assistant",
         "content": f"🫁 X-Ray Analysis:\n\n{explanation}"
-    })
+    }]
 
     return state

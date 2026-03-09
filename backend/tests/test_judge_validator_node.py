@@ -15,12 +15,10 @@ def run(coro):
 
 
 MOCK_LLAMA = "backend.src.nodes.judge_validator_node.call_llama"
-MOCK_DB = "backend.src.nodes.judge_validator_node.insert_log"
 
 
-@patch(MOCK_DB, return_value=None)
 @patch(MOCK_LLAMA)
-def test_judge_passes_valid_response(mock_llama, mock_db):
+def test_judge_passes_valid_response(mock_llama):
     """When LLaMA says PASS, judge_passed=True and response is unchanged."""
     mock_llama.return_value = "PASS"
     state = make_state(
@@ -40,9 +38,8 @@ def test_judge_passes_valid_response(mock_llama, mock_db):
     assert result["judge_feedback"] == ""
 
 
-@patch(MOCK_DB, return_value=None)
 @patch(MOCK_LLAMA)
-def test_judge_fails_and_regenerates(mock_llama, mock_db):
+def test_judge_fails_and_regenerates(mock_llama):
     """When LLaMA says FAIL, judge_passed=False and regeneration_count is incremented.
 
     V4 behavior: The judge does NOT regenerate inline. It sets judge_passed=False
@@ -70,9 +67,8 @@ def test_judge_fails_and_regenerates(mock_llama, mock_db):
     assert "FAIL" in result["judge_feedback"]
 
 
-@patch(MOCK_DB, return_value=None)
 @patch(MOCK_LLAMA)
-def test_judge_skipped_for_followup(mock_llama, mock_db):
+def test_judge_skipped_for_followup(mock_llama):
     """Judge is skipped when next_action == 'ask_followup'."""
     state = make_state(next_action="ask_followup")
 
@@ -83,9 +79,8 @@ def test_judge_skipped_for_followup(mock_llama, mock_db):
     assert result["judge_passed"] is True
 
 
-@patch(MOCK_DB, return_value=None)
 @patch(MOCK_LLAMA)
-def test_judge_skipped_for_priority_interrupt(mock_llama, mock_db):
+def test_judge_skipped_for_priority_interrupt(mock_llama):
     """Judge is skipped for emergency priority_interrupt."""
     state = make_state(next_action="priority_interrupt")
 
@@ -96,9 +91,8 @@ def test_judge_skipped_for_priority_interrupt(mock_llama, mock_db):
     assert result["judge_passed"] is True
 
 
-@patch(MOCK_DB, return_value=None)
 @patch(MOCK_LLAMA)
-def test_judge_skipped_when_no_assistant_message(mock_llama, mock_db):
+def test_judge_skipped_when_no_assistant_message(mock_llama):
     """Judge is skipped if no assistant messages exist."""
     state = make_state(messages=[{"role": "user", "content": "Hello"}])
 
@@ -109,9 +103,8 @@ def test_judge_skipped_when_no_assistant_message(mock_llama, mock_db):
     assert result["judge_passed"] is True
 
 
-@patch(MOCK_DB, return_value=None)
 @patch(MOCK_LLAMA)
-def test_judge_force_accepts_after_max_retries(mock_llama, mock_db):
+def test_judge_force_accepts_after_max_retries(mock_llama):
     """After MAX_REGENERATION_ATTEMPTS, judge force-accepts with force_accepted=True.
 
     V4 behavior: judge_passed stays False to preserve semantic integrity,

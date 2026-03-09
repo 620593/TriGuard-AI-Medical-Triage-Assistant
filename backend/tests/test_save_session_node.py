@@ -16,13 +16,11 @@ def run(coro):
 
 MOCK_UPDATE = "backend.src.nodes.save_session_node.update_session"
 MOCK_REPORT = "backend.src.nodes.save_session_node.save_report"
-MOCK_LOG = "backend.src.nodes.save_session_node.insert_log"
 
 
-@patch(MOCK_LOG, new_callable=AsyncMock)
 @patch(MOCK_REPORT, new_callable=AsyncMock)
 @patch(MOCK_UPDATE, new_callable=AsyncMock)
-def test_session_saved_to_mongodb(mock_update, mock_report, mock_log):
+def test_session_saved_to_mongodb(mock_update, mock_report):
     """When session_id is valid, update_session and save_report are called."""
     state = make_state(
         session_id="real-session-abc",
@@ -39,10 +37,9 @@ def test_session_saved_to_mongodb(mock_update, mock_report, mock_log):
     mock_report.assert_awaited_once()
 
 
-@patch(MOCK_LOG, new_callable=AsyncMock)
 @patch(MOCK_REPORT, new_callable=AsyncMock)
 @patch(MOCK_UPDATE, new_callable=AsyncMock)
-def test_local_session_skips_db(mock_update, mock_report, mock_log):
+def test_local_session_skips_db(mock_update, mock_report):
     """When session_id == 'local', no DB calls are made."""
     state = make_state(session_id="local")
 
@@ -53,10 +50,9 @@ def test_local_session_skips_db(mock_update, mock_report, mock_log):
     mock_report.assert_not_called()
 
 
-@patch(MOCK_LOG, new_callable=AsyncMock)
 @patch(MOCK_REPORT, new_callable=AsyncMock)
 @patch(MOCK_UPDATE, new_callable=AsyncMock)
-def test_empty_session_id_skips_db(mock_update, mock_report, mock_log):
+def test_empty_session_id_skips_db(mock_update, mock_report):
     """When session_id is empty, no DB calls are made."""
     state = make_state(session_id="")
 
@@ -66,10 +62,9 @@ def test_empty_session_id_skips_db(mock_update, mock_report, mock_log):
     mock_update.assert_not_called()
 
 
-@patch(MOCK_LOG, new_callable=AsyncMock)
 @patch(MOCK_REPORT, new_callable=AsyncMock)
 @patch(MOCK_UPDATE, new_callable=AsyncMock)
-def test_save_handles_db_error_gracefully(mock_update, mock_report, mock_log):
+def test_save_handles_db_error_gracefully(mock_update, mock_report):
     """If update_session throws, the node doesn't crash and returns state."""
     mock_update.side_effect = Exception("Mongo timeout")
     state = make_state(session_id="real-session")
@@ -80,10 +75,9 @@ def test_save_handles_db_error_gracefully(mock_update, mock_report, mock_log):
     assert result is not None
 
 
-@patch(MOCK_LOG, new_callable=AsyncMock)
 @patch(MOCK_REPORT, new_callable=AsyncMock)
 @patch(MOCK_UPDATE, new_callable=AsyncMock)
-def test_report_not_saved_during_followup(mock_update, mock_report, mock_log):
+def test_report_not_saved_during_followup(mock_update, mock_report):
     """Report is NOT saved when next_action == 'ask_followup' (session still active)."""
     state = make_state(session_id="real-session", next_action="ask_followup")
 

@@ -48,6 +48,10 @@ async def nutrition_node(state: TriageState) -> TriageState:
         "JSON only."
     )
 
+    if risk_level not in ("low", "moderate"):
+        logger.info(f"Skipping nutrition for risk level {risk_level}")
+        return state
+
     try:
         raw_text = await call_gemini(prompt, model_name="gemini-2.0-flash")
     except Exception as e:

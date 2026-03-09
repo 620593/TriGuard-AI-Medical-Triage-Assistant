@@ -42,6 +42,7 @@ def _init_state(**kwargs):
         "nutrition_advice": "",
         "nutrition_image": "",
         "audio_url": "",
+        "use_history": True,
     }
     base.update(kwargs)
     return base
@@ -66,11 +67,10 @@ PATCHES = {
 }
 
 
-@patch("backend.src.nodes.save_session_node.insert_log", new_callable=AsyncMock)
 @patch("backend.src.nodes.save_session_node.save_report", new_callable=AsyncMock)
 @patch("backend.src.nodes.save_session_node.update_session", new_callable=AsyncMock)
-@patch("backend.src.nodes.nutrition_node.generate_nutrition_advice",
-       return_value={"advice": "Drink water", "image_url": ""})
+@patch("backend.src.nodes.nutrition_node.call_gemini", new_callable=AsyncMock,
+       return_value='{"dietary_recommendations":["Drink water"],"foods_to_avoid":[],"hydration_advice":"","lifestyle_advice":"","confidence_score":0.9}')
 @patch("backend.src.nodes.mental_health_node.detect_mental_health_crisis", return_value=False)
 @patch("backend.src.nodes.risk_evaluation_node.evaluate_risk",
        return_value={"risk_score": 3.0, "risk_level": "low", "confidence": 0.9})
@@ -81,13 +81,13 @@ PATCHES = {
        return_value="🩺 Summary: Mild headache with fever.")
 @patch("backend.src.nodes.followup_node.call_llama", return_value="")
 @patch("backend.src.nodes.symptom_extraction_node.call_llama",
-       side_effect=["en", "headache, fever"])
+       return_value="headache, fever")
 @patch("backend.src.nodes.load_session_node.create_session", new_callable=AsyncMock,
        return_value="new-session-abc")
 def test_text_pipeline_full_flow(
     mock_create, mock_sym_llama, mock_fup_llama, mock_brain_llama,
-    mock_judge_llama, mock_search, mock_risk, mock_mh, mock_nutrition,
-    mock_update, mock_report, mock_log
+    mock_judge_llama, mock_search, mock_risk, mock_mh, mock_gemini,
+    mock_update, mock_report
 ):
     """Full text pipeline: new session → symptoms → followup → retrieval → risk → mental health → LLM → judge → nutrition → save."""
     from backend.src.graph.builder import build_triage_graph
@@ -109,7 +109,7 @@ def test_text_pipeline_full_flow(
     # LLaMA brain generated response
     assistant_msgs = [m for m in result["messages"] if m["role"] == "assistant"]
     assert len(assistant_msgs) >= 1
-    assert "DISCLAIMER" in assistant_msgs[-1]["content"]
+    assert "substitute for a licensed physician" in assistant_msgs[-1]["content"].lower()
 
     # Judge passed
     assert result["judge_passed"] is True
@@ -119,7 +119,6 @@ def test_text_pipeline_full_flow(
            result.get("nutrition_advice") is not None
 
 
-@patch("backend.src.nodes.save_session_node.insert_log", new_callable=AsyncMock)
 @patch("backend.src.nodes.save_session_node.save_report", new_callable=AsyncMock)
 @patch("backend.src.nodes.save_session_node.update_session", new_callable=AsyncMock)
 @patch("backend.src.nodes.judge_validator_node.call_llama", return_value="PASS")
@@ -136,7 +135,7 @@ def test_text_pipeline_full_flow(
        return_value="vision-session-abc")
 def test_vision_pipeline_full_flow(
     mock_create, mock_vision, mock_brain, mock_judge,
-    mock_update, mock_report, mock_log
+    mock_update, mock_report
 ):
     """Full vision pipeline: new session → medical_vision → llm_brain → judge → nutrition → save."""
     from backend.src.graph.builder import build_triage_graph

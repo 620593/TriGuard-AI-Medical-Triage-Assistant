@@ -22,7 +22,7 @@ def run(coro):
 def test_new_session_creates_session(mock_create):
     """When session_id is blank, a new session is created in MongoDB."""
     mock_create.return_value = "new-session-abc"
-    state = make_state(session_id="")
+    state = make_state(session_id="", use_history=True)
 
     from backend.src.nodes.load_session_node import load_session_node
     result = run(load_session_node(state))
@@ -35,7 +35,7 @@ def test_new_session_creates_session(mock_create):
 def test_new_session_fallback_on_db_error(mock_create):
     """If MongoDB fails for new session, session_id defaults to 'local'."""
     mock_create.side_effect = Exception("DB unavailable")
-    state = make_state(session_id="")
+    state = make_state(session_id="", use_history=True)
 
     from backend.src.nodes.load_session_node import load_session_node
     result = run(load_session_node(state))
@@ -68,12 +68,10 @@ def test_existing_session_merges_state(mock_load):
             "followup_count": 1,
             "risk_score": 3.5,
             "risk_level": "moderate",
-            "risk_confidence": 0.7,
-            "language": "en",
-            "retrieved_info": ["Some info"],
+            "language": "en"
         }
     }
-    state = make_state(session_id="existing-session-xyz")
+    state = make_state(session_id="existing-session-xyz", use_history=True)
 
     from backend.src.nodes.load_session_node import load_session_node
     result = run(load_session_node(state))
@@ -88,7 +86,7 @@ def test_existing_session_merges_state(mock_load):
 def test_existing_session_not_found(mock_load):
     """When session not found in DB, state is unchanged."""
     mock_load.return_value = None
-    state = make_state(session_id="ghost-session")
+    state = make_state(session_id="ghost-session", use_history=True)
 
     from backend.src.nodes.load_session_node import load_session_node
     result = run(load_session_node(state))
@@ -101,7 +99,7 @@ def test_existing_session_not_found(mock_load):
 def test_existing_session_db_error_is_safe(mock_load):
     """If MongoDB throws on load, node doesn't crash."""
     mock_load.side_effect = Exception("Timeout")
-    state = make_state(session_id="existing-session")
+    state = make_state(session_id="existing-session", use_history=True)
 
     from backend.src.nodes.load_session_node import load_session_node
     result = run(load_session_node(state))  # Should not raise

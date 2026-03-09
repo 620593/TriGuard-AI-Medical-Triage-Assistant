@@ -20,8 +20,9 @@ MOCK_LLAMA = "backend.src.nodes.symptom_extraction_node.call_llama"
 @patch(MOCK_LLAMA)
 def test_symptoms_extracted_from_english(mock_llama):
     """Basic extraction: LLaMA returns a comma-separated symptom list."""
-    # call sequence: lang detection → extraction
-    mock_llama.side_effect = ["en", "fever, cough, headache"]
+    # The input is English, so language detection is skipped, translation is skipped.
+    # Only the extraction call is made.
+    mock_llama.return_value = "fever, cough, headache"
     state = make_state(messages=[{"role": "user", "content": "I have fever, cough and headache"}])
 
     from backend.src.nodes.symptom_extraction_node import symptom_extraction_node
@@ -47,7 +48,8 @@ def test_no_symptoms_returns_state_unchanged(mock_llama):
 @patch(MOCK_LLAMA)
 def test_symptoms_merged_with_existing(mock_llama):
     """Existing symptoms are merged with newly extracted ones (union, no duplicates)."""
-    mock_llama.side_effect = ["en", "nausea, vomiting"]
+    # Only the extraction call is made since input is English
+    mock_llama.return_value = "nausea, vomiting"
     state = make_state(
         symptoms=["fever"],
         messages=[{"role": "user", "content": "Also feeling nauseous and vomiting"}]

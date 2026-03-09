@@ -144,15 +144,22 @@ async def llm_brain_node(state: TriageState) -> TriageState:
     # ── Get reasoning input ───────────────────────────────────────────────────
     reasoning_input = (state.get("reasoning_input", "") or "").strip()
 
+    # If reasoning input is effectively empty (e.g. no symptoms, no history, no query)
     if not reasoning_input:
-        state["llm_output"] = _fallback_llm_output(
-            "no_reasoning_input", risk_level, urgency
-        )
-        state["fallback_used"] = True
-        msg = empty_input_response(risk_level)
-        state["messages"] = state.get("messages", []) + [{"role": "assistant", "content": msg}]
-        log_event(logger, "llm_brain_empty_input_exit", risk_level=risk_level)
-        return state
+        # Check if the user's initial message had content, maybe symptom extraction missed it.
+        # We don't want to fast-exit if there was an actual query.
+        user_msgs = [m["content"] for m in state.get("messages", []) if m.get("role") == "user" and m.get("content", "").strip()]
+        if not user_msgs:
+            state["llm_output"] = _fallback_llm_output(
+                "no_reasoning_input", risk_level, urgency
+            )
+            state["fallback_used"] = True
+            msg = empty_input_response(risk_level)
+            state["messages"] = state.get("messages", []) + [{"role": "assistant", "content": msg}]
+            log_event(logger, "llm_brain_empty_input_exit", risk_level=risk_level)
+            return state
+        else:
+            reasoning_input = f"User Query: {user_msgs[-1]}"
 
     # ── Detect if this is a vision/image analysis case ───────────────────────
     is_vision_case = state.get("intent") == "body_image" and state.get("vision_findings")

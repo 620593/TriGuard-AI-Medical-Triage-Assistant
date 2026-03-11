@@ -6,4 +6,6 @@ name = "trigaurd-ai-monorepo"
 version = "3.0.0"
 description = "TriGuard AI Monorepo root"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "motor>=3.7.1",
+]

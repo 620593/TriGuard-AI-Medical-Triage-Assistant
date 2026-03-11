@@ -94,6 +94,38 @@ def _parse_llm_output(raw: str, fallback_risk: str, fallback_urgency: str, max_s
     }
 
 
+def _build_reasoning_fallback(state: TriageState) -> str:
+    """Builds minimal reasoning context from structured state when synthesizer input is absent."""
+    parts = []
+
+    user_input = (state.get("user_input", "") or "").strip()
+    if user_input:
+        parts.append(f"User input: {user_input}")
+
+    symptoms = [str(item).strip() for item in state.get("symptoms", []) if str(item).strip()]
+    if symptoms:
+        parts.append(f"Symptoms: {', '.join(symptoms)}")
+
+    retrieved_info = [str(item).strip() for item in state.get("retrieved_info", []) if str(item).strip()]
+    if retrieved_info:
+        parts.append(f"Retrieved context: {' '.join(retrieved_info[:3])}")
+
+    vision_findings = state.get("vision_findings") or {}
+    if vision_findings:
+        visual_items = vision_findings.get("visual_findings") or []
+        explanation = str(vision_findings.get("explanation", "")).strip()
+        if visual_items:
+            parts.append(f"Visual findings: {', '.join(str(item) for item in visual_items[:5])}")
+        if explanation:
+            parts.append(f"Vision explanation: {explanation}")
+
+    nutrition_advice = (state.get("nutrition_advice", "") or "").strip()
+    if nutrition_advice:
+        parts.append(f"Nutrition advice: {nutrition_advice}")
+
+    return "\n".join(parts)
+
+
 async def llm_brain_node(state: TriageState) -> TriageState:
     """
     Generates structured {clinical_summary, possible_causes, risk_level,
@@ -109,6 +141,41 @@ async def llm_brain_node(state: TriageState) -> TriageState:
     """
     risk_level = state.get("risk_level", "unknown")
     urgency    = state.get("urgency", "routine")
+
+    # ── Fast-exit: deterministic emergency interrupt ────────────────────────
+    if state.get("next_action") == "priority_interrupt":
+        symptoms = ", ".join(state.get("symptoms", [])[:3]) or "severe symptoms"
+        if state.get("mental_health_flag"):
+            emergency_message = (
+                "This sounds like a mental health emergency. Please call or text 988 now, "
+                "or go to the nearest emergency department immediately if you may act on these thoughts. "
+                "Stay with a trusted person and do not remain alone."
+            )
+        else:
+            emergency_message = (
+                f"This may be a medical emergency involving {symptoms}. "
+                "Call emergency services now or go to the nearest emergency room immediately. "
+                "Do not wait for symptoms to settle on their own."
+            )
+
+        state["llm_output"] = {
+            "clinical_summary": emergency_message,
+            "possible_causes": [],
+            "risk_level": risk_level,
+            "recommended_action": emergency_message,
+            "urgency": urgency if urgency in _URGENCY_LEVELS else "emergency",
+            "confidence_score": max(float(state.get("risk_confidence", 0.0) or 0.0), 0.95),
+            "suggested_otc": None,
+            "nutrition_tip": None,
+        }
+        state["last_structured_summary"] = emergency_message[:600]
+        state["last_risk_level"] = risk_level
+        state["last_intent"] = state.get("intent", "medical_text") or "medical_text"
+        state["messages"] = state.get("messages", []) + [
+            {"role": "assistant", "content": emergency_message}
+        ]
+        log_event(logger, "llm_brain_priority_interrupt", risk_level=risk_level, urgency=urgency)
+        return state
 
     # ── Fast-exit: vision API failed ─────────────────────────────────────────
     if state.get("vision_error"):
@@ -139,10 +206,27 @@ async def llm_brain_node(state: TriageState) -> TriageState:
         log_event(logger, "llm_brain_xray_passthrough")
         return state
 
-    # ── Fast-exit vision logic removed per V6 structural update ───────────────
+    # ── Fast-exit: low-confidence vision result ──────────────────────────────
+    vision_findings = state.get("vision_findings") or {}
+    vision_confidence = float(vision_findings.get("confidence", 0.0) or 0.0)
+    if vision_findings and vision_confidence < 0.6:
+        msg = (
+            "The image is not clear enough for a safe assessment. "
+            "Please upload a clearer image with better lighting and focus, "
+            "or describe what you are seeing in text."
+        )
+        state["messages"] = state.get("messages", []) + [{"role": "assistant", "content": msg}]
+        state["llm_output"] = _fallback_llm_output("low_vision_confidence", risk_level, urgency)
+        state["fallback_used"] = True
+        log_event(logger, "llm_brain_low_confidence_vision_exit", confidence=vision_confidence)
+        return state
 
     # ── Get reasoning input ───────────────────────────────────────────────────
     reasoning_input = (state.get("reasoning_input", "") or "").strip()
+    if not reasoning_input:
+        reasoning_input = _build_reasoning_fallback(state)
+        if reasoning_input:
+            state["reasoning_input"] = reasoning_input
 
     if not reasoning_input:
         state["llm_output"] = _fallback_llm_output(

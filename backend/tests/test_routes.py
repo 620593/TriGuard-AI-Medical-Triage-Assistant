@@ -171,3 +171,75 @@ def test_reports_invalid_user_rejected(mock_reports, client):
     """Reports endpoint rejects invalid user IDs."""
     resp = client.get("/api/v3/reports", headers={"x-user-id": "@@invalid"})
     assert resp.status_code == 400
+
+
+@patch("backend.src.api.routes.text_to_speech", return_value="")
+@patch("backend.src.api.routes.transcribe_audio")
+def test_voice_endpoint_uses_graph_audio_and_normalized_language(mock_transcribe, mock_tts, client, mock_graph):
+    """Voice route should normalize detected language and reuse graph-generated audio output."""
+    mock_transcribe.return_value = {
+        "text": "I think I am having a heart attack",
+        "language": "English",
+    }
+    mock_graph.ainvoke = AsyncMock(return_value={
+        "messages": [
+            {"role": "user", "content": "I think I am having a heart attack"},
+            {"role": "assistant", "content": "Call emergency services now."},
+        ],
+        "session_id": "voice-session",
+        "risk_level": "critical",
+        "final_response": "Call emergency services now.",
+        "audio_url": "graph-generated.mp3",
+    })
+
+    audio_bytes = b"RIFF" + b"\x00" * 64
+    resp = client.post(
+        "/api/v3/voice",
+        files={"audio": ("sample.wav", audio_bytes, "audio/wav")},
+        data={"user_id": "voice-user", "language": "English"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["risk_level"] == "critical"
+    assert body["audio_path"] == "graph-generated.mp3"
+    assert body["audio_url"].endswith("/static/audio/graph-generated.mp3")
+    mock_tts.assert_not_called()
+
+    graph_state = mock_graph.ainvoke.await_args.args[0]
+    assert graph_state["language"] == "en"
+    assert graph_state["user_consent_for_call"] is True
+
+
+@patch("backend.src.api.routes.text_to_speech", return_value="fallback.mp3")
+@patch("backend.src.api.routes.transcribe_audio")
+def test_voice_endpoint_falls_back_to_route_tts_with_normalized_language(mock_transcribe, mock_tts, client, mock_graph):
+    """If graph TTS output is missing, the route fallback should still use normalized language."""
+    mock_transcribe.return_value = {
+        "text": "I have chest pain",
+        "language": "English",
+    }
+    mock_graph.ainvoke = AsyncMock(return_value={
+        "messages": [
+            {"role": "user", "content": "I have chest pain"},
+            {"role": "assistant", "content": "Please seek urgent care now."},
+        ],
+        "session_id": "voice-session",
+        "risk_level": "high",
+        "final_response": "Please seek urgent care now.",
+        "audio_url": "",
+    })
+
+    audio_bytes = b"RIFF" + b"\x00" * 64
+    resp = client.post(
+        "/api/v3/voice",
+        files={"audio": ("sample.wav", audio_bytes, "audio/wav")},
+        data={"user_id": "voice-user", "language": "English"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["audio_path"] == "fallback.mp3"
+    assert body["audio_url"].endswith("/static/audio/fallback.mp3")
+    mock_tts.assert_called_once_with("Please seek urgent care now.", "en")
+

@@ -50,6 +50,8 @@ _HIGH_FLAGS = frozenset({
     "severe headache", "vomiting blood", "severe dehydration",
     "loss of consciousness", "severe allergic reaction",
     "can't breathe", "cannot breathe",
+    # Classic cardiac radiation symptoms — added to catch STEMI presentations
+    "left arm pain", "arm pain", "jaw pain", "neck pain", "radiating pain",
 })
 
 # Moderate: common concerning symptoms needing attention
@@ -64,6 +66,38 @@ _LOW_FLAGS = frozenset({
     "headache", "fatigue", "tiredness", "runny nose", "sneezing",
     "stuffy nose", "congestion", "mild cough", "slight cough",
 })
+
+# ── Compound word normalization ───────────────────────────────────────────────
+# LLaMA symptom extractor sometimes fuses words (e.g. "chestpain", "lefthand").
+# Expand these BEFORE flag matching so keyword checks work correctly.
+_COMPOUND_EXPANSIONS = {
+    "chestpain":           "chest pain",
+    "chestache":           "chest ache",
+    "heartattack":         "heart attack",
+    "heartpain":           "heart pain",
+    "lefthand":            "left hand",
+    "righthand":           "right hand",
+    "leftarm":             "left arm",
+    "rightarm":            "right arm",
+    "leftleg":             "left leg",
+    "rightleg":            "right leg",
+    "jawpain":             "jaw pain",
+    "neckpain":            "neck pain",
+    "backpain":            "back pain",
+    "stomachpain":         "stomach pain",
+    "stomachache":         "stomach ache",
+    "shoulderpain":        "shoulder pain",
+    "kneepain":            "knee pain",
+    "throatpain":          "throat pain",
+    "breathingdifficulty": "difficulty breathing",
+}
+
+
+def _expand_compounds(text: str) -> str:
+    """Expand fused medical terms so keyword flag matching works correctly."""
+    for compound, expanded in _COMPOUND_EXPANSIONS.items():
+        text = text.replace(compound, expanded)
+    return text
 
 # Known benign combinations → always LOW risk
 _BENIGN_COMBOS = [
@@ -130,8 +164,8 @@ def _rule_based_score(symptoms: list) -> tuple:
     """
     symptom_phrases = [s.strip().lower() for s in symptoms]
 
-    # Build sets for flag matching
-    symptom_str = " ".join(symptom_phrases)
+    # Build sets for flag matching — expand fused compound words first
+    symptom_str = _expand_compounds(" ".join(symptom_phrases))
 
     # Count flags — but only on actual symptom text
     critical_hits = sum(1 for f in _CRITICAL_FLAGS if f in symptom_str)
@@ -145,8 +179,9 @@ def _rule_based_score(symptoms: list) -> tuple:
     # Reduce moderate hits by mild count (floor at 0)
     effective_moderate_hits = max(moderate_hits - mild_symptom_count, 0)
 
-    # Critical: requires ≥2 critical flags OR 1 critical + 1 high
-    if critical_hits >= 2 or (critical_hits >= 1 and high_hits >= 1):
+    # Critical: even a SINGLE unambiguous critical keyword is a medical emergency.
+    # Heart attack, stroke, cardiac arrest etc. must NEVER fall through to moderate/low.
+    if critical_hits >= 1:
         return 9.5, "critical"
 
     # High: at least 1 high flag (chest pain ALONE → high, not critical)

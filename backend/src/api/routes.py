@@ -21,6 +21,7 @@ from backend.src.tools.mongodb_tool import (
 from backend.src.tools.whisper_tool import transcribe_audio
 from backend.src.tools.tts_tool import text_to_speech
 from backend.src.tools.output_parser import parse_response
+from backend.src.utils.language_utils import normalize_language_code
 
 logger = get_logger("api")
 router = APIRouter()
@@ -76,6 +77,7 @@ class TriageRequest(BaseModel):
     user_id: Optional[str] = "anonymous"
     language: Optional[str] = "en"
     use_history: bool = False   # Opt-in: merge past session history into this request
+    user_consent_for_call: bool = False  # Opt-in: user must explicitly consent before emergency call fires
 
     @field_validator("user_id", mode="before")
     @classmethod
@@ -125,7 +127,8 @@ def _is_valid_audio_bytes(data: bytes) -> bool:
 
 def _build_initial_state(msg: str, mode: str, sid: str, uid: str, lang: str,
                          use_history: bool = False,
-                         new_session: bool = False) -> dict:
+                         new_session: bool = False,
+                         user_consent_for_call: bool = False) -> dict:
     return {
         "messages": [{"role": "user", "content": msg}],
         "symptoms": [],
@@ -147,6 +150,8 @@ def _build_initial_state(msg: str, mode: str, sid: str, uid: str, lang: str,
         "session_memory": "",
         # voice_response_required is set for voice mode so the TTS graph node fires
         "voice_response_required": mode == "voice",
+        # Emergency calling: user must explicitly opt-in before Twilio fires
+        "user_consent_for_call": user_consent_for_call,
     }
 
 # ── Endpoints ───────────────────────────────────────────────────────────────
@@ -193,6 +198,7 @@ async def triage_endpoint(
             use_history=True if not is_new_session else request.use_history,
             # new_session: signals load_history_node to skip loading (nothing saved yet)
             new_session=is_new_session,
+            user_consent_for_call=request.user_consent_for_call,
         )
 
         app_graph = req.app.state.graph
@@ -407,32 +413,35 @@ async def voice_endpoint(
                 pass
 
         transcribed_text = transcription_result.get("text", "")
-        detected_lang    = transcription_result.get("language") or language or "en"
+        detected_lang    = normalize_language_code(
+            transcription_result.get("language") or language or "en"
+        )
 
         if not transcribed_text:
             raise HTTPException(status_code=400, detail="Could not transcribe audio. Please try again.")
 
         state = _build_initial_state(
-            transcribed_text, "voice", session_id or "", valid_uid, detected_lang
+            transcribed_text, "voice", session_id or "", valid_uid, detected_lang,
+            user_consent_for_call=True,
         )
         app_graph = req.app.state.graph
         result    = await app_graph.ainvoke(state)
 
         assistant_msgs = [m for m in result.get("messages", []) if m.get("role") == "assistant"]
-        response_text  = assistant_msgs[-1]["content"] if assistant_msgs else "No response generated."
+        response_text  = (
+            result.get("final_response")
+            or result.get("formatted_response")
+            or (assistant_msgs[-1]["content"] if assistant_msgs else "No response generated.")
+        )
 
-        # ── Generate TTS audio response ─────────────────────────────────────────
-        # text_to_speech() returns a filename (e.g. "triage_abc123.mp3") written
-        # to backend/audio_output/ which is mounted at /static/audio/ in main.py.
-        audio_filename = await asyncio.to_thread(text_to_speech, response_text, detected_lang)
+        audio_filename = result.get("audio_url", "")
+        if not audio_filename and response_text:
+            audio_filename = await asyncio.to_thread(text_to_speech, response_text, detected_lang)
 
-        # Build the full static URL so the browser can fetch the file directly.
-        # main.py mounts: app.mount("/static/audio", StaticFiles(directory=audio_output))
+        full_audio_url = ""
         if audio_filename:
             base = str(req.base_url).rstrip("/")
             full_audio_url = f"{base}/static/audio/{audio_filename}"
-        else:
-            full_audio_url = ""
 
         return VoiceResponse(
             session_id=result.get("session_id", ""),

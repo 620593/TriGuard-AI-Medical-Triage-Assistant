@@ -30,21 +30,31 @@ logger = get_logger("emergency_escalation")
 _HIGH_RISK_LEVELS = frozenset({"high", "critical"})
 
 
-def _build_voice_summary(state: TriageState) -> str:
-    """Builds a deterministic voice summary for the Twilio call. No LLM."""
-    risk_level = state.get("risk_level", "high").upper()
-    urgency    = state.get("urgency", "emergency").upper()
-    symptoms   = state.get("symptoms", [])
-    sym_text   = ", ".join(symptoms[:5]) if symptoms else "reported symptoms"
-    session_id = state.get("session_id", "unknown")
-
+def _has_implied_emergency_consent(state: TriageState) -> bool:
+    """Critical voice cases auto-escalate even if the frontend omitted consent."""
     return (
-        f"TriGuard AI Medical Alert. A patient with session ID {session_id} "
-        f"has been assessed as {risk_level} risk with {urgency} urgency. "
-        f"Reported symptoms include: {sym_text}. "
-        f"Please ensure the patient receives immediate medical attention. "
-        f"This is an automated alert from TriGuard AI triage system."
+        state.get("input_mode") == "voice"
+        and state.get("risk_level", "").lower() == "critical"
+        and bool(state.get("red_flag_triggered"))
     )
+
+
+def _build_call_info(state: TriageState) -> dict:
+    """
+    Builds a structured info dict for the Twilio emergency call. No LLM.
+
+    Collects all available patient context from state so that
+    build_emergency_twiml() (in twilio_client) can produce a rich,
+    detailed voice script with symptoms, suspected conditions, and an
+    explicit request to dispatch an ambulance.
+    """
+    return {
+        "symptoms":           state.get("symptoms", []),
+        "risk_level":         state.get("risk_level", "high"),
+        "urgency":            state.get("urgency", "emergency"),
+        "disease_candidates": state.get("disease_candidates", []),
+        "session_id":         state.get("session_id", "unknown"),
+    }
 
 
 async def emergency_escalation_node(state: TriageState) -> TriageState:
@@ -65,7 +75,7 @@ async def emergency_escalation_node(state: TriageState) -> TriageState:
     # ── Condition checks (all must pass) ─────────────────────────────────────
     risk_level   = state.get("risk_level", "").lower()
     red_flag     = state.get("red_flag_triggered", False)
-    user_consent = state.get("user_consent_for_call", False)
+    explicit_consent = state.get("user_consent_for_call", False)
     auto_enabled = os.getenv("AUTO_ESCALATION_ENABLED", "false").lower() == "true"
     contact      = os.getenv("EMERGENCY_CONTACT_NUMBER", "")
 
@@ -81,6 +91,7 @@ async def emergency_escalation_node(state: TriageState) -> TriageState:
         log_event(logger, "escalation_skipped", reason="auto_escalation_disabled")
         return state
 
+    user_consent = bool(explicit_consent) or _has_implied_emergency_consent(state)
     if not user_consent:
         log_event(logger, "escalation_skipped", reason="user_consent_not_given")
         return state
@@ -90,9 +101,9 @@ async def emergency_escalation_node(state: TriageState) -> TriageState:
         return state
 
     # ── Place the call ────────────────────────────────────────────────────────
-    voice_message = _build_voice_summary(state)
+    call_info = _build_call_info(state)
 
-    result = await asyncio.to_thread(make_emergency_call, contact, voice_message)
+    result = await asyncio.to_thread(make_emergency_call, contact, call_info)
 
     if result["success"]:
         state["emergency_call_triggered"] = True

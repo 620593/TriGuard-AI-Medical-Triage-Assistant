@@ -78,7 +78,7 @@ async def simulate_emergency_test(
         "user_id":     user_id,
         "messages":    [{"role": "user", "content": user_input}],
         # Note: user_consent_for_call intentionally left False unless testing Twilio
-        "user_consent_for_call": False,
+        "user_consent_for_call": True,
     }
 
     # Graph contains async nodes — must use ainvoke

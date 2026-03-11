@@ -23,6 +23,8 @@ from pathlib import Path
 
 from gtts import gTTS
 
+from backend.src.utils.language_utils import normalize_language_code
+
 _logger = logging.getLogger("triguard.tts")
 
 # Output directory — anchored to project root, not CWD
@@ -68,7 +70,8 @@ def text_to_speech(text: str, language: str = "en") -> str:
         os.makedirs(_AUDIO_DIR, exist_ok=True)
         _cleanup_old_files()
 
-        tts      = gTTS(text=text, lang=language, slow=False)
+        language_code = normalize_language_code(language)
+        tts      = gTTS(text=text, lang=language_code, slow=False)
         filename = f"triage_{uuid.uuid4().hex[:8]}.mp3"
         filepath = os.path.join(_AUDIO_DIR, filename)
         tts.save(filepath)

@@ -5,6 +5,7 @@ Tests for llm_brain_node: standard response, vision path, emergency path, nutrit
 """
 
 import pytest
+import json
 from unittest.mock import patch, AsyncMock
 from backend.tests.helpers import make_state
 import asyncio
@@ -20,7 +21,16 @@ MOCK_LLAMA = "backend.src.nodes.llm_brain_node.call_llama"
 @patch(MOCK_LLAMA)
 def test_standard_response_appended_to_messages(mock_llama):
     """Standard non-emergency, non-vision path generates and appends a response."""
-    mock_llama.return_value = "🩺 Summary: Mild fever noted."
+    mock_llama.return_value = json.dumps({
+        "clinical_summary": "It looks like you have a mild fever.",
+        "possible_causes": ["viral infection"],
+        "risk_level": "low",
+        "recommended_action": "You should rest and drink fluids.",
+        "urgency": "routine",
+        "confidence_score": 0.8,
+        "suggested_otc": None,
+        "nutrition_tip": None,
+    })
     state = make_state(
         symptoms=["fever"],
         risk_level="low",
@@ -33,7 +43,7 @@ def test_standard_response_appended_to_messages(mock_llama):
 
     assistant_msgs = [m for m in result["messages"] if m["role"] == "assistant"]
     assert len(assistant_msgs) >= 1
-    assert "DISCLAIMER" in assistant_msgs[-1]["content"]
+    assert "mild fever" in assistant_msgs[-1]["content"].lower()
 
 
 @patch(MOCK_LLAMA)
@@ -61,9 +71,11 @@ def test_priority_interrupt_generates_emergency_alert(mock_llama):
     from backend.src.nodes.llm_brain_node import llm_brain_node
     result = run(llm_brain_node(state))
 
+    mock_llama.assert_not_called()
     assistant_msgs = [m for m in result["messages"] if m["role"] == "assistant"]
     assert any("emergency" in m["content"].lower() or "urgent" in m["content"].lower()
                for m in assistant_msgs)
+    assert result["llm_output"]["risk_level"] == "critical"
 
 
 @patch(MOCK_LLAMA)
@@ -125,8 +137,17 @@ def test_low_confidence_vision_triggers_quality_warning(mock_llama):
 
 @patch(MOCK_LLAMA)
 def test_nutrition_appended_to_response(mock_llama):
-    """Nutrition advice in state is appended at the end of the LLaMA response."""
-    mock_llama.return_value = "🩺 Summary: Cold symptoms."
+    """Low-risk nutrition context is preserved in llm_output for later response formatting."""
+    mock_llama.return_value = json.dumps({
+        "clinical_summary": "It looks like you have cold symptoms.",
+        "possible_causes": ["common cold"],
+        "risk_level": "low",
+        "recommended_action": "You should rest and monitor your symptoms.",
+        "urgency": "routine",
+        "confidence_score": 0.8,
+        "suggested_otc": None,
+        "nutrition_tip": "Drink warm fluids and eat fruits rich in vitamin C.",
+    })
     state = make_state(
         symptoms=["runny nose"],
         risk_level="low",
@@ -137,6 +158,5 @@ def test_nutrition_appended_to_response(mock_llama):
     from backend.src.nodes.llm_brain_node import llm_brain_node
     result = run(llm_brain_node(state))
 
-    assistant_msgs = [m for m in result["messages"] if m["role"] == "assistant"]
-    content = assistant_msgs[-1]["content"]
-    assert "vitamin C" in content or "Nutrition" in content
+    assert result["llm_output"]["nutrition_tip"] is not None
+    assert "vitamin c" in result["llm_output"]["nutrition_tip"].lower()

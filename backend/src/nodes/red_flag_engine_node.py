@@ -27,6 +27,29 @@ logger = get_logger("red_flag_engine")
 _RISK_ORDER = ["routine", "low", "moderate", "high", "critical"]
 _RISK_TO_IDX = {r: i for i, r in enumerate(_RISK_ORDER)}
 
+# Compound word expansions mirrored from risk_tool so fused terms ("chestpain",
+# "lefthand") match keyword rules even when the symptom extractor fuses words.
+_COMPOUND_EXPANSIONS = {
+    "chestpain":           "chest pain",
+    "chestache":           "chest ache",
+    "heartattack":         "heart attack",
+    "heartpain":           "heart pain",
+    "lefthand":            "left hand",
+    "righthand":           "right hand",
+    "leftarm":             "left arm",
+    "rightarm":            "right arm",
+    "jawpain":             "jaw pain",
+    "neckpain":            "neck pain",
+    "breathingdifficulty": "difficulty breathing",
+}
+
+
+def _expand_compounds(text: str) -> str:
+    """Expand fused medical compound words so keyword checks fire correctly."""
+    for compound, expanded in _COMPOUND_EXPANSIONS.items():
+        text = text.replace(compound, expanded)
+    return text
+
 
 @lru_cache(maxsize=1)
 def _load_rules() -> dict:
@@ -43,14 +66,24 @@ def _load_rules() -> dict:
 
 
 def _build_search_text(state: TriageState) -> str:
-    """Builds a single lowercase search string from all relevant fields."""
+    """Builds a single lowercase search string from all relevant state fields.
+
+    Includes raw user messages as a fallback so keywords typed directly by
+    the user (e.g. 'I think I'm having a heart attack') are always matched,
+    even if the symptom extractor fuses or misses them.
+    """
+    raw_messages = " ".join(
+        m.get("content", "") for m in state.get("messages", []) if m.get("role") == "user"
+    )
     parts = [
         " ".join(state.get("symptoms", [])),
         state.get("user_input", ""),
+        raw_messages,
         state.get("reasoning_input", ""),
         state.get("extracted_text", ""),
     ]
-    return " ".join(p for p in parts if p).lower()
+    combined = " ".join(p for p in parts if p).lower()
+    return _expand_compounds(combined)
 
 
 def _determine_urgency(search_text: str, rules: dict) -> str:

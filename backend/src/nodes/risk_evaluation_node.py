@@ -41,6 +41,31 @@ _SKIP_RISK_INTENTS = frozenset({"xray"})
 _SKIP_RISK_LEVELS = frozenset({"not_applicable", "unknown"})
 
 
+def _build_risk_symptoms(state: TriageState) -> list[str]:
+    """Falls back to raw user text when symptom extraction missed a critical phrase."""
+    symptoms = [s for s in state.get("symptoms", []) if s and str(s).strip()]
+    if symptoms:
+        return symptoms
+
+    fallback_inputs = []
+    user_input = state.get("user_input", "")
+    if user_input and user_input.strip():
+        fallback_inputs.append(user_input.strip())
+
+    raw_user_messages = [
+        m.get("content", "").strip()
+        for m in state.get("messages", [])
+        if m.get("role") == "user" and m.get("content", "").strip()
+    ]
+    fallback_inputs.extend(raw_user_messages)
+
+    deduped = []
+    for candidate in fallback_inputs:
+        if candidate not in deduped:
+            deduped.append(candidate)
+    return deduped
+
+
 async def risk_evaluation_node(state: TriageState) -> TriageState:
     """
     Runs hybrid risk evaluation and updates risk fields in state.
@@ -75,7 +100,7 @@ async def risk_evaluation_node(state: TriageState) -> TriageState:
         return state
 
     # ── Standard risk evaluation for: medical_text, medical_report, body_image, casual ──
-    symptoms       = state.get("symptoms", [])
+    symptoms       = _build_risk_symptoms(state)
     retrieved_info = state.get("retrieved_info", [])
     followup_count = state.get("followup_count", 0)
 

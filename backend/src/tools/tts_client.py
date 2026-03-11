@@ -17,6 +17,8 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
+from backend.src.utils.language_utils import normalize_language_code
+
 
 # Resolve audio_output dir relative to this file so it works regardless of CWD.
 # File layout:  backend/src/tools/tts_client.py
@@ -53,7 +55,8 @@ def synthesize_speech(
         out_dir.mkdir(parents=True, exist_ok=True)
 
         safe_text = text[:4096]
-        tts = gTTS(text=safe_text, lang=language, slow=False)
+        language_code = normalize_language_code(language)
+        tts = gTTS(text=safe_text, lang=language_code, slow=False)
 
         filename = f"triage_tts_{uuid.uuid4().hex}.mp3"
         filepath = out_dir / filename

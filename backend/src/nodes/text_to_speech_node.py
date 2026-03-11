@@ -15,6 +15,7 @@ import asyncio
 from backend.src.state.state import TriageState
 from backend.src.tools.tts_client import synthesize_speech
 from backend.src.logging.logger import get_logger, log_event
+from backend.src.utils.language_utils import normalize_language_code
 
 logger = get_logger("text_to_speech")
 
@@ -36,7 +37,7 @@ async def text_to_speech_node(state: TriageState) -> TriageState:
         return state
 
     text     = state.get("formatted_response", "") or state.get("final_response", "")
-    language = state.get("language", "en")
+    language = normalize_language_code(state.get("language", "en"))
 
     if not text.strip():
         log_event(logger, "tts_skipped", reason="no_text_to_synthesize")

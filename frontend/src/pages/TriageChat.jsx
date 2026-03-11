@@ -48,6 +48,7 @@ const TriageChat = () => {
   const [voiceMode, setVoiceMode] = useState(false); // true = fullscreen VoiceInterface
   const [sessionID, setSessionID] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [consentForCall, setConsentForCall] = useState(false); // emergency call consent
   // imageTypeModal holds the pending File waiting for the user to select its type
   const [imageTypeModal, setImageTypeModal] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -230,6 +231,7 @@ const TriageChat = () => {
         // Always include session_id (null on first message starts a new session)
         session_id: sessionID,
         message: input,
+        user_consent_for_call: consentForCall,
       });
 
       const data = response?.data;
@@ -725,6 +727,19 @@ const TriageChat = () => {
                 className="w-full skeuo-input resize-none max-h-32 py-3 disabled:opacity-50"
                 onPaste={handlePaste}
               />
+
+              {/* Emergency call consent */}
+              <label className="flex items-center gap-2 cursor-pointer select-none group px-1">
+                <input
+                  type="checkbox"
+                  checked={consentForCall}
+                  onChange={(e) => setConsentForCall(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-red-500 cursor-pointer"
+                />
+                <span className="text-[10px] text-slate-400 group-hover:text-slate-300 transition-colors">
+                  🚨 Consent to emergency call if risk is critical
+                </span>
+              </label>
             </div>
 
             <button

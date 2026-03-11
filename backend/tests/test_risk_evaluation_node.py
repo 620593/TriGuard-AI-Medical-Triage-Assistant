@@ -80,3 +80,22 @@ def test_high_risk_not_critical_proceeds_normally(mock_eval):
 
     assert result["next_action"] == ""
     assert result["risk_level"] == "high"
+
+
+@patch(MOCK_EVAL)
+def test_raw_user_input_is_used_when_symptoms_are_empty(mock_eval):
+    """Critical phrases in raw user input still trigger interrupt if extraction missed them."""
+    mock_eval.return_value = {"risk_score": 9.5, "risk_level": "critical", "confidence": 0.95}
+    state = make_state(
+        symptoms=[],
+        user_input="I am suffering from heart attack",
+        messages=[{"role": "user", "content": "I am suffering from heart attack"}],
+    )
+
+    from backend.src.nodes.risk_evaluation_node import risk_evaluation_node
+    result = run(risk_evaluation_node(state))
+
+    called_symptoms = mock_eval.call_args.kwargs["symptoms"]
+    assert called_symptoms == ["I am suffering from heart attack"]
+    assert result["risk_level"] == "critical"
+    assert result["next_action"] == "priority_interrupt"

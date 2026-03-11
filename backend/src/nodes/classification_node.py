@@ -51,6 +51,12 @@ _MEDICAL_KEYWORDS = frozenset({
     "medicine", "prescri", "treatment", "doctor", "hospital",
 })
 
+_EMERGENCY_KEYWORDS = frozenset({
+    "heart attack", "stroke", "cardiac arrest", "can't breathe",
+    "cannot breathe", "difficulty breathing", "shortness of breath",
+    "chest pain", "seizure", "unconscious", "vomiting blood",
+})
+
 
 def classification_node(state: TriageState) -> TriageState:
     """
@@ -111,6 +117,7 @@ def classification_node(state: TriageState) -> TriageState:
         if m.get("role") == "user"
     ]
     latest_input = user_messages[-1].lower().strip() if user_messages else ""
+    has_medical_content = any(kw in latest_input for kw in _MEDICAL_KEYWORDS | _EMERGENCY_KEYWORDS)
 
     # 🔥 V5.1 FOLLOW-UP CONTEXT PATCH: always populate user_input for text turns.
     # This guarantees llm_brain never receives an empty user_input on text turns.
@@ -136,7 +143,7 @@ def classification_node(state: TriageState) -> TriageState:
            for kw in _CASUAL_KEYWORDS):
         # Only classify as casual if the message is SHORT (< 30 chars)
         # Longer messages with greetings like "Hi, I have chest pain" are medical
-        if len(latest_input) < 30:
+        if len(latest_input) < 30 and not has_medical_content:
             state["intent"] = "casual"
             log_event(logger, "intent_classified",
                       intent="casual", source="casual_keywords")

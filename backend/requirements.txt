@@ -1,17 +1,43 @@
-# TriGuard AI — Medical Triage Assistant v2
+# TriGuard AI — Medical Triage Assistant v3
 # ──────────────────────────────────────────
 # Install with: pip install -r requirements.txt
 # Or with uv:   uv pip install -r requirements.txt
 
-# LangGraph pipeline + LangChain core components
+# ── Core pipeline ────────────────────────────────────────────
 langgraph>=0.2.0
 langchain-core>=0.3.0
-
-# Groq Python client (LLaMA API)
 groq>=0.10.0
-
-# Tavily web search client (medical grounding)
 tavily-python>=0.3.0
-
-# Environment variable loading from .env
 python-dotenv>=1.0.0
+
+# ── FastAPI backend ──────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+gunicorn>=22.0.0
+python-multipart>=0.0.9
+
+# ── MongoDB (async) ──────────────────────────────────────────
+motor>=3.5.0
+pymongo>=4.8.0
+
+# ── Voice mode ───────────────────────────────────────────────
+gTTS>=2.5.0
+
+# ── OCR pipeline ─────────────────────────────────────────────
+Pillow>=10.3.0
+pytesseract>=0.3.10
+
+# ── X-ray / ML ───────────────────────────────────────────────
+transformers>=4.53.0
+torch>=2.2.0
+
+# ── HTTP requests (HuggingFace API) ─────────────────────────
+requests>=2.31.0
+
+# ── Gemini API (nutrition_node) ──────────────────────────────
+google-generativeai>=0.8.0
+
+# ── Auth ─────────────────────────────────────────────────────
+pyjwt>=2.11.0
+passlib[bcrypt]>=1.7.4
+email-validator>=2.3.0

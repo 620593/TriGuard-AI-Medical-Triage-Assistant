@@ -18,10 +18,17 @@ frontend/dist-ssr/
 
 # --- Environment Variables (CRITICAL) ---
 .env
-.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 backend/.env
 frontend/.env
-frontend/.env.*
+frontend/.env.local
+# Allow .env.example files (they are templates with no real secrets)
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 
 # --- OS / IDE ---
 .DS_Store
@@ -45,3 +52,9 @@ pnpm-debug.log*
 # --- Project specific ---
 uv.lock
 backend/uv.lock
+
+backend/tests/
+
+.agent/
+.agents/
+/pytest_cache/

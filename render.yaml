@@ -1,0 +1,72 @@
+# ──────────────────────────────────────────────────────────────
+#  TriGuard AI — Render Deployment Configuration
+#  Docs: https://render.com/docs/render-yaml-spec
+# ──────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: triguard-ai-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: starter # upgrade to standard/pro for production load
+    healthCheckPath: /api/v3/health
+    autoDeploy: true
+
+    envVars:
+      # ── Required ──────────────────────────────────────────────
+      - key: GROQ_API_KEY
+        sync: false # set manually in Render dashboard
+
+      - key: MONGODB_URI
+        sync: false # set manually in Render dashboard
+
+      - key: TAVILY_API_KEY
+        sync: false
+
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # ── Optional external services ─────────────────────────────
+      - key: HF_API_TOKEN
+        sync: false
+
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+
+      - key: EMERGENCY_CONTACT_NUMBER
+        sync: false
+
+      # ── JWT Secret ────────────────────────────────────────────
+      - key: JWT_SECRET_KEY
+        generateValue: true # Render auto-generates a secure random value
+
+      # ── CORS — set to your Vercel frontend URL ─────────────────
+      # Example: https://your-app.vercel.app,https://yourcustomdomain.com
+      - key: TRIGUARD_ALLOWED_ORIGINS
+        sync: false
+
+      # ── App configuration ──────────────────────────────────────
+      - key: TRIGUARD_ENV
+        value: production
+
+      - key: TRIGUARD_LOG_LEVEL
+        value: INFO
+
+      - key: AUTO_ESCALATION_ENABLED
+        value: "false"
+
+      # ── Python path (needed when running from /app) ───────────
+      - key: PYTHONPATH
+        value: /app
+
+    disk:
+      name: triguard-static
+      mountPath: /app/audio_output
+      sizeGB: 1

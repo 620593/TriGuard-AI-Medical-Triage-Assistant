@@ -1,7 +1,11 @@
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v3";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
 const client = axios.create({
-  baseURL: "http://localhost:8000/api/v3",
+  baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -72,9 +76,9 @@ export const triageAPI = {
 
   // Static Resource Helpers
   getStaticAudioUrl: (filename) =>
-    filename ? `http://localhost:8000/static/audio/${filename}` : null,
+    filename ? `${BACKEND_URL}/static/audio/${filename}` : null,
   getStaticNutritionUrl: (filename) =>
-    filename ? `http://localhost:8000/static/nutrition/${filename}` : null,
+    filename ? `${BACKEND_URL}/static/nutrition/${filename}` : null,
 };
 
 export default client;

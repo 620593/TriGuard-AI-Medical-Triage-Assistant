@@ -255,7 +255,8 @@ export default function Login() {
 
           <button
             onClick={() => {
-              const BASE_URL = "http://localhost:8000/api/v3";
+              const BASE_URL =
+              import.meta.env.VITE_API_URL || "http://localhost:8000/api/v3";
               window.location.href = BASE_URL + "/auth/google";
             }}
             className="w-full bg-white text-slate-900 flex items-center justify-center space-x-3 py-3 rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors shadow-md relative z-10"

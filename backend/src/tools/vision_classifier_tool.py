@@ -21,7 +21,7 @@ import os
 import json
 import base64
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from groq import AsyncGroq
 from backend.src.logging.logger import get_logger
 

@@ -24,10 +24,55 @@ from backend.src.tools.presentation_formatter import (
 logger = get_logger("response")
 
 _DISCLAIMER = (
-    "\n\n⚠️ Disclaimer: TriGuard is a triage support tool — not a substitute "
-    "for a licensed physician. Always consult a qualified healthcare professional "
-    "for personal medical advice."
+    "\n\nTriGuard is a screening aid — not a diagnosis. "
+    "Please consult a qualified doctor for medical advice."
 )
+
+
+def _apply_calm_tone(text: str, risk_level: str) -> str:
+    """Normalises alarming phrases to calm wording without changing structure."""
+    if not text:
+        return ""
+
+    cleaned = text
+
+    replacements = {
+        "⚠️ IMPORTANT:": "",
+        "IMPORTANT:": "",
+        "These findings MUST be reviewed by a qualified radiologist before any clinical decisions.": (
+            "It's a good idea to speak with a doctor for a closer review."
+        ),
+        "MUST consult": "it's a good idea to speak with a doctor",
+        "must consult": "it's a good idea to speak with a doctor",
+        "must be reviewed": "it's a good idea to have this reviewed",
+        "seek immediate emergency care": "please go to the nearest emergency room or call emergency services",
+        "Seek immediate emergency care": "Please go to the nearest emergency room or call emergency services",
+    }
+
+    for old, new in replacements.items():
+        cleaned = cleaned.replace(old, new)
+
+    # Critical routes should remain urgent but calm.
+    if str(risk_level).lower() == "critical":
+        cleaned = cleaned.replace(
+            "Call emergency services (911 / 999 / 112) or have someone drive you to the nearest emergency room. Do not wait.",
+            "Please go to the nearest emergency room or call emergency services."
+        )
+
+    # Ensure one gentle disclaimer line only.
+    disclaimer_variants = [
+        "TriGuard is a triage support tool — not a substitute for a licensed physician. Always consult a qualified healthcare professional for personal medical advice.",
+        "Disclaimer: TriGuard is a triage support tool — not a substitute for a licensed physician. Always consult a qualified healthcare professional for personal medical advice.",
+        "TriGuard is a screening aid, not a diagnosis. Please consult a qualified doctor for medical advice.",
+    ]
+    for variant in disclaimer_variants:
+        cleaned = cleaned.replace(variant, "").strip()
+
+    cleaned = cleaned.replace("⚠️ Disclaimer:", "").replace("Disclaimer:", "").strip()
+    cleaned = "\n".join(line for line in cleaned.splitlines() if line.strip())
+
+    cleaned = cleaned.rstrip()
+    return f"{cleaned}{_DISCLAIMER}"
 
 
 # ── Private state helpers ─────────────────────────────────────────────────────
@@ -89,8 +134,9 @@ def response_node(state: TriageState) -> TriageState:
     if next_action == "priority_interrupt":
         messages = state.get("messages", [])
         last_msg = messages[-1].get("content", "") if messages else ""
-        state["formatted_response"] = last_msg
-        state["final_response"]     = last_msg
+        normalized = _apply_calm_tone(last_msg, state.get("risk_level", "unknown"))
+        state["formatted_response"] = normalized
+        state["final_response"]     = normalized
         state["system_trace"]       = _build_system_trace(state, next_action)
         return state
 
@@ -110,7 +156,7 @@ def response_node(state: TriageState) -> TriageState:
         messages  = state.get("messages", [])
         asst_msgs = [m for m in messages if m.get("role") == "assistant"]
         fallback  = asst_msgs[-1].get("content", "") if asst_msgs else ""
-        state["formatted_response"] = fallback + _DISCLAIMER
+        state["formatted_response"] = _apply_calm_tone(fallback, state.get("risk_level", "unknown"))
         state["final_response"]     = state["formatted_response"]
     else:
         formatted = apply_tone(llm_output, urgency, vision_findings=vision_findings)
@@ -157,7 +203,7 @@ def response_node(state: TriageState) -> TriageState:
             # Signal async_nutrition_image_node to fire in the next graph step
             state["nutrition_image_required"] = True
 
-        formatted += _DISCLAIMER
+        formatted = _apply_calm_tone(formatted, state.get("risk_level", "unknown"))
 
         state["formatted_response"] = formatted
         state["final_response"]     = formatted

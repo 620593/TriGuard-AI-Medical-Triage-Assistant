@@ -13,7 +13,7 @@ V6 design rules:
       prior_history_context, medication_requested, google_oauth.
 """
 
-from typing import TypedDict, List, Optional, Any
+from typing import TypedDict, List, Any
 
 
 class TriageState(TypedDict, total=False):

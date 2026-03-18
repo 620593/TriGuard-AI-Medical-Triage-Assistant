@@ -11,20 +11,68 @@ Rules:
 
 import os
 import logging
-from typing import List, Optional
+import time
+from typing import List
+
+import requests
 
 logger = logging.getLogger("traguard.vector_store_client")
 
 # ── Singleton index (loaded once, read-only) ─────────────────────────────────
 _index = None
 _documents: List[str] = []
-_embedder = None
 _initialized = False
+_HF_EMBEDDING_URL = (
+    "https://router.huggingface.co/models/"
+    "sentence-transformers/all-MiniLM-L6-v2"
+)
+
+
+def _embed_texts(texts: List[str]) -> List[List[float]]:
+    """Generates embeddings via HuggingFace Inference API with 503 retry."""
+    hf_token = os.getenv("HF_API_TOKEN", "")
+    if not hf_token:
+        raise EnvironmentError("HF_API_TOKEN not set")
+
+    headers = {"Authorization": f"Bearer {hf_token}"}
+    payload = {"inputs": texts}
+
+    last_error = ""
+    for attempt in range(1, 4):
+        response = requests.post(
+            _HF_EMBEDDING_URL,
+            headers=headers,
+            json=payload,
+            timeout=40,
+        )
+
+        if response.status_code == 200:
+            body = response.json()
+            if (
+                isinstance(body, list)
+                and body
+                and isinstance(body[0], list)
+            ):
+                return body
+            raise RuntimeError(f"Unexpected embedding response format: {body}")
+
+        if response.status_code == 503 and attempt < 3:
+            logger.info(
+                "Embedding model is loading (503). Retrying %d/3 in 10s...",
+                attempt + 1,
+            )
+            time.sleep(10)
+            continue
+
+        last_error = f"HTTP {response.status_code}: {response.text}"
+        break
+
+    raise RuntimeError(f"Embedding inference failed: {last_error}")
 
 
 def _lazy_init() -> bool:
-    """Lazy-initialise the FAISS index and sentence embedder on first call."""
-    global _index, _documents, _embedder, _initialized
+    """Lazy-initialise the FAISS index on first call."""
+    global _index, _documents, _initialized
 
     if _initialized:
         return _index is not None
@@ -36,9 +84,6 @@ def _lazy_init() -> bool:
     try:
         import faiss  # type: ignore[import]
         import json
-        from sentence_transformers import SentenceTransformer  # type: ignore[import]
-
-        _embedder  = SentenceTransformer("all-MiniLM-L6-v2")
         _index     = faiss.read_index(index_path)
 
         with open(documents_path, "r", encoding="utf-8") as f:
@@ -73,8 +118,11 @@ def retrieve_candidates(
         return {"candidates": [], "success": False, "error": "Vector store unavailable"}
 
     try:
+        import numpy as np
+
         query_text = " ".join(symptoms[:20])[:512]
-        embedding  = _embedder.encode([query_text])
+        embedding_vectors = _embed_texts([query_text])
+        embedding = np.array(embedding_vectors, dtype="float32")
 
         distances, indices = _index.search(embedding, top_k)
         candidates = [

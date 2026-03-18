@@ -21,7 +21,6 @@ Design:
 import os
 import re
 from datetime import datetime, timezone
-from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorClient
 

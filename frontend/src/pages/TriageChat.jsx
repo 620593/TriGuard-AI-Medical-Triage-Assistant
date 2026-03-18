@@ -24,6 +24,7 @@ import RiskBadge from "../components/RiskBadge";
 import VoiceToggle from "../components/VoiceToggle";
 import VoiceInterface from "../components/VoiceInterface";
 import TriageResponseCard from "../components/TriageResponseCard";
+import XrayResultCard from "../components/XrayResultCard";
 
 /** Sanitize once at creation time and convert newlines to <br/> */
 const sanitize = (text) =>
@@ -344,7 +345,7 @@ const TriageChat = () => {
             content: content,
             html: sanitize(content),
             risk: data.risk_level,
-            type: "text",
+            type: type === "xray" ? "xray" : "text",
             imageUrl: triageAPI.getStaticNutritionUrl(
               data.nutrition_image || data.image_url,
             ),
@@ -574,11 +575,15 @@ const TriageChat = () => {
                         : "skeuo-panel rounded-2xl rounded-tl-none font-medium text-slate-100"
                     }`}
                   >
-                    {msg.risk && msg.role === "assistant" && !msg.parsed && (
-                      <div className="mb-2">
-                        <RiskBadge level={msg.risk} />
-                      </div>
-                    )}
+                    {msg.risk &&
+                      msg.role === "assistant" &&
+                      !msg.parsed &&
+                      msg.type !== "xray" &&
+                      msg.type !== "voice" && (
+                        <div className="mb-2">
+                          <RiskBadge level={msg.risk} />
+                        </div>
+                      )}
 
                     {/* Assistant message: use rich card if parsed, else raw HTML */}
                     {msg.role === "assistant" && msg.parsed ? (
@@ -588,6 +593,8 @@ const TriageChat = () => {
                         rawText={msg.content}
                         nutritionImageUrl={msg.nutritionImageUrl || null}
                       />
+                    ) : msg.role === "assistant" && msg.type === "xray" ? (
+                      <XrayResultCard text={msg.content} riskLevel={msg.risk} />
                     ) : (
                       <p
                         className="whitespace-pre-wrap text-sm leading-relaxed"

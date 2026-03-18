@@ -15,6 +15,7 @@ PHI Safety:
 import json
 import logging
 import os
+import sys
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -66,7 +67,7 @@ def get_logger(name: str) -> logging.Logger:
 
     # Avoid adding duplicate handlers on repeated calls
     if not logger.handlers:
-        handler = logging.StreamHandler()
+        handler = logging.StreamHandler(stream=sys.stderr)
         handler.setFormatter(JSONFormatter())
         logger.addHandler(handler)
         logger.setLevel(getattr(logging, _LOG_LEVEL, logging.INFO))

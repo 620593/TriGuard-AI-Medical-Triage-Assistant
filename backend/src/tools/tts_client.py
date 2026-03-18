@@ -12,7 +12,6 @@ Rules:
        not in the static mount, causing 404 when browser tried to fetch.)
 """
 
-import os
 import uuid
 from pathlib import Path
 from typing import Optional

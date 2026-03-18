@@ -27,15 +27,11 @@ logger = get_logger("xray_analysis")
 
 # Fallback message used when the ML model returns empty results
 _XRAY_FALLBACK_MSG = (
-    "🫁 X-Ray Analysis:\n\n"
-    "Your X-ray image was received, but the AI screening model could not "
-    "extract specific findings at this time (the model may still be loading "
-    "or the image format is not supported).\n\n"
-    "💡 Recommendation: Please consult a qualified radiologist for a proper "
-    "review of your X-ray.\n\n"
-    "⚠️ IMPORTANT: This is an AI screening tool, NOT a radiological diagnosis. "
-    "These findings MUST be reviewed by a qualified radiologist before any "
-    "clinical decisions."
+    "Thanks for sharing your X-ray. From this quick screen, many parts are not "
+    "clear enough to explain confidently yet.\n\n"
+    "A doctor can take a closer look and guide you with the right next step.\n\n"
+    "TriGuard is a screening aid, not a diagnosis. Please consult a qualified "
+    "doctor for medical advice."
 )
 
 
@@ -90,16 +86,22 @@ def xray_analysis_node(state: TriageState) -> TriageState:
     label_str = ", ".join(f"{r['label']} ({r['score']:.0%})" for r in raw_labels)
 
     prompt = (
-        "You are a medical imaging assistant. Explain these X-ray findings "
-        "in simple, patient-friendly language.\n\n"
-        "RULES:\n"
-        "- Do NOT confirm any diagnosis.\n"
-        "- Do NOT use definitive language like 'You have...'.\n"
-        "- Use phrases like 'The AI model suggests...', 'This may indicate...'.\n"
-        "- Recommend consulting a radiologist for definitive interpretation.\n\n"
+        "You are a warm, calm health assistant helping a non-medical person understand "
+        "their chest X-ray screening result. Follow these rules strictly:\n\n"
+        "1. Start with reassurance: mention what appears normal first.\n"
+        "2. Use simple everyday language only. No medical jargon whatsoever.\n"
+        "3. If something needs attention, say 'there's an area worth having a doctor "
+        "look at' - never say 'abnormal finding' or 'pathology detected'.\n"
+        "4. Keep the response under 120 words total.\n"
+        "5. End with ONE clear, calm next step - not a list of scary bullet points.\n"
+        "6. Tone: like a caring friend, not a medical report.\n"
+        "7. Never use words: fracture, lesion, opacity, infiltrate, consolidation, "
+        "abnormality, critical, MUST, immediately (unless truly life-threatening).\n"
+        "8. The disclaimer must be one gentle line at the bottom, not bold or alarming.\n"
+        "9. Do not confirm a diagnosis and do not use 'you have'.\n\n"
         f"Vision model findings: {label_str}\n"
         f"Raw analysis: {findings}\n\n"
-        "Patient-friendly explanation (max 6 lines):"
+        "Return only the final patient message text."
     )
 
     explanation = call_llama(prompt, max_tokens=300).strip()
@@ -108,8 +110,8 @@ def xray_analysis_node(state: TriageState) -> TriageState:
         explanation = findings
 
     explanation += (
-        "\n\n⚠️ IMPORTANT: This is an AI screening tool, NOT a radiological diagnosis. "
-        "These findings MUST be reviewed by a qualified radiologist before any clinical decisions."
+        "\n\nTriGuard is a screening aid, not a diagnosis. "
+        "Please consult a qualified doctor for medical advice."
     )
 
     state["xray_findings"] = explanation
@@ -127,7 +129,7 @@ def xray_analysis_node(state: TriageState) -> TriageState:
     # Add to conversation
     state["messages"].append({
         "role": "assistant",
-        "content": f"🫁 X-Ray Analysis:\n\n{explanation}"
+        "content": explanation
     })
 
     return state

@@ -27,10 +27,6 @@ gTTS>=2.5.0
 Pillow>=10.3.0
 pytesseract>=0.3.10
 
-# ── X-ray / ML ───────────────────────────────────────────────
-transformers>=4.53.0
-torch>=2.2.0
-
 # ── HTTP requests (HuggingFace API) ─────────────────────────
 requests>=2.31.0
 

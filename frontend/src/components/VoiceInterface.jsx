@@ -15,14 +15,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, X, RotateCcw, Volume2, AlertTriangle } from "lucide-react";
-
-// ── Risk badge colours ───────────────────────────────────────────────────────
-const RISK_COLOURS = {
-  low: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  moderate: "bg-yellow-500/20  text-yellow-300  border-yellow-500/30",
-  high: "bg-orange-500/20  text-orange-300  border-orange-500/30",
-  critical: "bg-red-500/20     text-red-300     border-red-500/30",
-};
+import CalmResultCard from "./CalmResultCard";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
@@ -432,20 +425,17 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-sm w-full mx-4 px-5 py-3 rounded-2xl bg-teal-500/5 border border-teal-500/20"
+              className="max-w-xl w-full mx-4"
             >
-              {riskLevel && (
-                <span
-                  className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border mb-2 ${
-                    RISK_COLOURS[riskLevel] ?? RISK_COLOURS.low
-                  }`}
-                >
-                  {riskLevel} risk
-                </span>
-              )}
-              <p className="text-sm text-slate-200 leading-relaxed line-clamp-6">
-                {responseText}
-              </p>
+              <CalmResultCard
+                riskLevel={riskLevel || "low"}
+                title="Here's what we found"
+                subtitle="Voice screening • Always verify with a doctor"
+              >
+                <p className="text-base leading-relaxed text-slate-700 line-clamp-6">
+                  {responseText}
+                </p>
+              </CalmResultCard>
             </motion.div>
           )}
         </AnimatePresence>

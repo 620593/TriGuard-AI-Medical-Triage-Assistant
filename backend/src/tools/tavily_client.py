@@ -10,7 +10,7 @@ Rules:
 """
 
 import os
-from typing import List, Optional
+from typing import List
 
 
 def search_medical(

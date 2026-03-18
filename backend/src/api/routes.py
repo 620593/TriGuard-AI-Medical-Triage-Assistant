@@ -6,15 +6,14 @@ Processes images IN-MEMORY only (No Cloudinary).
 Safety: Strict User ID validation and secure in-memory buffers.
 """
 
-import asyncio
 import os
 import re
 import tempfile
 import uuid
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Header, Request
-from pydantic import BaseModel, Field, field_validator
-from backend.src.logging.logger import get_logger, log_event, LatencyTracker
+from pydantic import BaseModel, field_validator
+from backend.src.logging.logger import get_logger, LatencyTracker
 from backend.src.tools.mongodb_tool import (
     list_user_sessions, list_user_reports, delete_user_report, create_session
 )
@@ -37,7 +36,7 @@ def _validate_uid_string(uid: str) -> bool:
 
 # ── Dependency ──────────────────────────────────────────────────────────────
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Header, Request, Security
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from backend.src.tools.security import decode_access_token
 

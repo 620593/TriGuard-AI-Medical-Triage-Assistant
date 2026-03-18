@@ -113,7 +113,7 @@ def _generate_meal_image(context: str) -> str:
 
     try:
         api_url = (
-            "https://api-inference.huggingface.co/models/"
+            "https://router.huggingface.co/models/"
             "stabilityai/stable-diffusion-xl-base-1.0"
         )
         headers = {"Authorization": f"Bearer {hf_token}"}

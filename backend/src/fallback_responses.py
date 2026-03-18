@@ -13,7 +13,6 @@ remains a pure reasoning node (no hardcoded UI strings in reasoning code).
     V5 pipeline failure states cleanly, separate from LLM reasoning logic.
 """
 
-from typing import Optional
 
 
 def vision_error_response() -> str:

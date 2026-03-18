@@ -19,7 +19,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from backend.src.state.state import TriageState
-from backend.src.tools.mongodb_tool import update_session, save_report, create_session
+from backend.src.tools.mongodb_tool import update_session, save_report
 from backend.src.logging.logger import get_logger, log_event
 from backend.src.pipeline_config import STATELESS_INPUT_MODES
 

@@ -23,9 +23,6 @@ dependencies = [
     # ── V3: OCR pipeline ─────────────────────────────────────────
     "Pillow>=10.3.0",
     "pytesseract>=0.3.10",
-    # ── V3: X-ray analysis ───────────────────────────────────────
-    "transformers>=4.53.0",
-    "torch>=2.2.0",
     # ── V3: HTTP requests (for HuggingFace API) ─────────────────
     "requests>=2.31.0",
     # ── V3: Gemini API (for nutrition_node) ─────────────────────

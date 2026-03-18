@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 import os
 import httpx

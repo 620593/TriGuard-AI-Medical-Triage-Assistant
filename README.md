@@ -49,7 +49,7 @@ Version 6.0 introduces a massive structural leap, finalizing the architecture wi
 
 ## 🏗️ Architecture Overview
 
-The V5 architecture utilizes LangGraph for a robust, state-driven execution environment:
+The V6 architecture utilizes LangGraph for a robust, state-driven execution environment:
 
 ```mermaid
 graph TD
@@ -82,9 +82,9 @@ TriGuard-AI/
 │   │   ├── graph/     # LangGraph state machines and routing
 │   │   ├── tools/     # API connectors (Groq, Tavily, MongoDB)
 │   │   └── state/     # TypedDict state contracts
-│   └── tests/         # Comprehensive V5 test suite
+│   └── tests/         # Comprehensive V6 test suite
 ├── frontend/          # React 19 + Framer Motion + Tailwind 4
-└── README.md          # Version 5.0 Documentation
+└── README.md          # Version 6.0 Documentation
 ```
 
 ---
@@ -104,7 +104,7 @@ TriGuard-AI/
 
 ## 🚀 Getting Started
 
-Follow these steps to deploy TriGuard AI v5.0 locally.
+Follow these steps to deploy TriGuard AI v6.0 locally.
 
 **1. Install Core Dependencies**
 
@@ -116,7 +116,9 @@ pip install uv
 
 ```bash
 cd backend
-uv sync
+uv venv
+source .venv/bin/activate
+uv pip install -e .
 ```
 
 **3. Setup Frontend Client**
@@ -127,12 +129,17 @@ npm install
 ```
 
 **4. Environment Variables (`backend/.env`)**
-Create a `.env` file in the `backend/` directory with your API keys:
+Create a `.env` file in the `backend/` directory with your API keys (see `backend/.env.example` for a complete list of optional variables):
 
 ```env
+# Required API Keys
 GROQ_API_KEY="your_groq_api_key_here"
 TAVILY_API_KEY="your_tavily_api_key_here"
-MONGO_URI="mongodb://localhost:27017"
+GEMINI_API_KEY="your_gemini_api_key_here"
+
+# Database & Auth
+MONGODB_URI="mongodb://localhost:27017"
+JWT_SECRET_KEY="your_super_secret_jwt_key_here"
 ```
 
 ---

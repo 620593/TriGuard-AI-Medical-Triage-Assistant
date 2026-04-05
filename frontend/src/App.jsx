@@ -49,13 +49,13 @@ function Navigation() {
     <nav className="skeuo-panel !rounded-none !border-x-0 !border-t-0 sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
       <Link to="/" className="flex items-center space-x-2">
         <Shield className="w-8 h-8 text-medical-primary drop-shadow-md" />
-        <span className="text-2xl font-bold bg-gradient-to-r from-[#0d9488] to-[#0f766e] bg-clip-text text-transparent drop-shadow-sm hidden sm:inline-block">
+        <span className="text-2xl font-bold bg-gradient-to-r from-[#f97316] to-[#ea580c] bg-clip-text text-transparent drop-shadow-sm hidden sm:inline-block">
           TriGuard AI
         </span>
       </Link>
 
       <div
-        className={`${isMenuOpen ? "absolute top-[72px] left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-white/10 shadow-lg p-4 flex flex-col space-y-3" : "hidden"} md:flex md:static md:flex-row md:space-y-0 md:space-x-4 items-center`}
+        className={`${isMenuOpen ? "absolute top-[72px] left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-[#fed7aa] shadow-lg p-4 flex flex-col space-y-3 z-50" : "hidden"} md:flex md:static md:flex-row md:space-y-0 md:space-x-4 items-center`}
       >
         <Link
           to="/dashboard"
@@ -84,7 +84,7 @@ function Navigation() {
 
         {user ? (
           <div className="flex items-center space-x-4 ml-4">
-            <div className="hidden lg:flex items-center space-x-2 text-sm text-slate-300">
+            <div className="hidden lg:flex items-center space-x-2 text-sm text-gray-600 font-medium">
               <User size={16} />
               <span>{user.name}</span>
             </div>
@@ -93,7 +93,7 @@ function Navigation() {
                 handleLogout();
                 setIsMenuOpen(false);
               }}
-              className="text-red-400 hover:text-red-300 transition-colors flex items-center space-x-1 text-sm font-medium"
+              className="text-red-500 hover:text-red-600 transition-colors flex items-center space-x-1 text-sm font-medium"
             >
               <LogOut size={16} />
               <span>Logout</span>
@@ -192,7 +192,7 @@ function App() {
           </Routes>
         </main>
 
-        <footer className="p-8 text-center text-slate-500 text-sm">
+        <footer className="p-8 text-center text-gray-500 text-sm">
           &copy; 2026 TriGuard AI — Medical Triage System. All rights reserved.
         </footer>
       </div>

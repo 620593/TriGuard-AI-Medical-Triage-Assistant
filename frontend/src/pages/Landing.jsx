@@ -36,10 +36,10 @@ const Landing = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl font-bold text-white mb-8 leading-tight drop-shadow-xl"
+            className="text-5xl md:text-7xl font-bold text-gray-800 mb-8 leading-tight drop-shadow-sm"
           >
             Intelligent Triage. <br />
-            <span className="bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent drop-shadow-md">
+            <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">
               Safe & Fast Advice.
             </span>
           </motion.h1>
@@ -48,7 +48,7 @@ const Landing = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-xl text-slate-300 max-w-3xl mx-auto mb-12 shadow-black drop-shadow-md font-light"
+            className="text-xl text-gray-500 max-w-3xl mx-auto mb-12 drop-shadow-sm font-light"
           >
             Your AI-powered medical companion for symptom checking, X-ray
             analysis, and health risk assessment—accessible anywhere, anytime.
@@ -79,17 +79,17 @@ const Landing = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <FeatureCard
-              icon={<Mic className="text-purple-500" />}
+              icon={<Mic className="text-orange-500" />}
               title="Voice Mode"
               description="Speak naturally about your concerns. Our AI understands medical symptoms across multiple languages."
             />
             <FeatureCard
-              icon={<Search className="text-blue-500" />}
+              icon={<Search className="text-amber-500" />}
               title="OCR & X-Ray"
               description="Upload medical reports or X-ray images for instant AI-powered pre-diagnosis and risk analysis."
             />
             <FeatureCard
-              icon={<Shield className="text-emerald-500" />}
+              icon={<Shield className="text-rose-500" />}
               title="Risk Guard"
               description="Immediate crisis override system. If your symptoms indicate danger, we guide you to urgent care."
             />
@@ -103,14 +103,14 @@ const Landing = () => {
 const FeatureCard = ({ icon, title, description }) => (
   <motion.div
     whileHover={{ y: -5, scale: 1.02 }}
-    className="skeuo-panel p-6 relative group overflow-hidden"
+    className="skeuo-panel p-6 relative group overflow-hidden bg-white border border-[#fed7aa] rounded-2xl shadow-sm transition-all duration-200"
   >
-    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-6 border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+    <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    <div className="w-12 h-12 rounded-2xl bg-[#ffedd5] flex items-center justify-center mb-6 border border-[#fed7aa] shadow-sm">
       {icon}
     </div>
-    <h3 className="text-xl font-bold mb-4 text-white">{title}</h3>
-    <p className="text-slate-300 leading-relaxed text-sm font-light">
+    <h3 className="text-xl font-bold mb-4 text-gray-800">{title}</h3>
+    <p className="text-gray-500 leading-relaxed text-sm font-light">
       {description}
     </p>
   </motion.div>

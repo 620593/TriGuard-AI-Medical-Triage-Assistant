@@ -88,11 +88,11 @@ const History = () => {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-3 text-white drop-shadow-md">
-          <Shield className="text-teal-400 drop-shadow-sm" />
+        <h1 className="text-3xl font-bold flex items-center gap-3 text-gray-800 drop-shadow-sm">
+          <Shield className="text-orange-500 drop-shadow-sm" />
           Triage History
         </h1>
-        <p className="text-slate-300 mt-2 font-light">
+        <p className="text-gray-500 mt-2 font-light">
           View and manage your past AI health assessments.
         </p>
       </header>
@@ -101,7 +101,7 @@ const History = () => {
       <div className="flex flex-col md:flex-row gap-4 mb-8">
         <div className="relative flex-1">
           <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
             size={18}
           />
           <input
@@ -115,7 +115,7 @@ const History = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
           <Loader2 className="animate-spin mb-4" size={32} />
           <p>Retrieving your encrypted health data...</p>
         </div>
@@ -132,8 +132,8 @@ const History = () => {
             ))
           ) : (
             <div className="text-center py-20 skeuo-panel p-6">
-              <FileText className="mx-auto text-slate-300 mb-4" size={48} />
-              <p className="text-slate-500">
+              <FileText className="mx-auto text-gray-400 mb-4" size={48} />
+              <p className="text-gray-500">
                 No medical reports found matching your criteria.
               </p>
             </div>
@@ -162,15 +162,15 @@ const ReportCard = ({ report, onDelete, isDeleting }) => {
     >
       <div className="flex items-center gap-4">
         <div
-          className={`p-3 rounded-2xl backdrop-blur-md border ${data?.risk_level === "CRITICAL" ? "bg-red-500/20 text-red-300 border-red-500/30" : "bg-teal-500/10 text-teal-400 border-teal-500/20"}`}
+          className={`p-3 rounded-2xl backdrop-blur-md border ${data?.risk_level === "CRITICAL" ? "bg-red-50 text-red-600 border-red-200" : "bg-[#ffedd5] text-orange-600 border-[#fed7aa]"}`}
         >
           <Activity size={24} />
         </div>
         <div>
-          <h3 className="font-bold text-lg leading-tight text-white">
+          <h3 className="font-bold text-lg leading-tight text-gray-800">
             {data?.symptoms?.slice(0, 3).join(", ") || "General Assessment"}
           </h3>
-          <div className="flex items-center gap-3 text-xs text-slate-400 mt-1 uppercase font-bold tracking-wider">
+          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1 uppercase font-bold tracking-wider">
             <span className="flex items-center gap-1">
               <Calendar size={12} /> {date}
             </span>
@@ -181,14 +181,14 @@ const ReportCard = ({ report, onDelete, isDeleting }) => {
       <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
         <div className="text-right">
           <RiskBadge level={data?.risk_level} />
-          <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">
+          <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold">
             SCORE: {data?.risk_score || "N/A"}/10
           </p>
         </div>
         <button
           onClick={onDelete}
           disabled={isDeleting}
-          className="p-2 ml-4 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border border-red-500/0 hover:border-red-500/50 disabled:opacity-50"
+          className="p-2 ml-4 rounded-full bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors border border-red-200 hover:border-red-300 disabled:opacity-50"
           title="Delete Record"
         >
           {isDeleting ? (

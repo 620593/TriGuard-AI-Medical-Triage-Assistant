@@ -71,50 +71,49 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex bg-orange-50 font-mono">
+    <div className="min-h-screen flex bg-[var(--bg-primary)] font-mono">
       {/* LEFT PANEL */}
-      <div className="hidden lg:flex flex-col justify-center w-[40%] bg-white relative overflow-hidden px-12 border-r border-[#fed7aa] shadow-2xl">
+      <div className="hidden lg:flex flex-col justify-center w-[40%] bg-[var(--bg-secondary)] relative overflow-hidden px-12 border-r border-[var(--panel-border)]">
         {/* Animated Radial Gradient Background */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(249,115,22,0.05),transparent_60%)] animate-pulse duration-[3000ms]" />
 
         <div className="relative z-10 flex flex-col h-full py-16">
           <div className="flex-1 flex flex-col justify-center mb-10">
-            <Shield className="w-16 h-16 text-orange-500 mb-6 drop-shadow-[0_0_15px_rgba(249,115,22,0.3)]" />
-            <h1
-              className="text-4xl font-bold text-gray-800 mb-2"
+            <Shield className="w-16 h-16 text-[var(--accent-primary)] mb-6 drop-0_0_15px_rgba(249,115,22,0.3)]" />
+            <h1 className="text-4xl font-bold text-[var(--accent-primary)] mb-2"
               style={{ fontFamily: "Syne, sans-serif" }}
             >
               TriGuard AI
             </h1>
-            <p className="text-gray-500 text-sm mb-10">
+            <p className="text-[var(--text-secondary)] text-sm mb-10">
               Your intelligent health risk assistant
             </p>
 
-            <div className="w-12 h-1 bg-gradient-to-r from-orange-400 to-amber-500 rounded-full mb-10"></div>
+            <div className="w-12 h-1 )] rounded-full mb-10"></div>
 
             <div className="space-y-6">
-              <div className="flex items-center space-x-4 text-gray-600">
-                <div className="p-2 bg-[#ffedd5] rounded-lg border border-[#fed7aa]">
-                  <Brain className="w-5 h-5 text-orange-500" />
+              <div className="flex items-center space-x-4 text-[var(--text-secondary)]">
+                <div className="p-2 bg-[var(--accent-light)] rounded-lg border border-[var(--panel-border)]">
+                  <Brain className="w-5 h-5 text-[var(--accent-primary)]" />
                 </div>
                 <span className="text-sm font-medium">AI Symptom Analysis</span>
               </div>
-              <div className="flex items-center space-x-4 text-gray-600">
-                <div className="p-2 bg-[#ffedd5] rounded-lg border border-[#fed7aa]">
-                  <Mic className="w-5 h-5 text-amber-500" />
+              <div className="flex items-center space-x-4 text-[var(--text-secondary)]">
+                <div className="p-2 bg-[var(--accent-light)] rounded-lg border border-[var(--panel-border)]">
+                  <Mic className="w-5 h-5 text-[var(--accent-hover)]" />
                 </div>
                 <span className="text-sm font-medium">Voice Triage</span>
               </div>
-              <div className="flex items-center space-x-4 text-gray-600">
-                <div className="p-2 bg-[#ffedd5] rounded-lg border border-[#fed7aa]">
-                  <Lock className="w-5 h-5 text-orange-400" />
+              <div className="flex items-center space-x-4 text-[var(--text-secondary)]">
+                <div className="p-2 bg-[var(--accent-light)] rounded-lg border border-[var(--panel-border)]">
+                  <Lock className="w-5 h-5 text-[var(--accent-primary)]" />
                 </div>
                 <span className="text-sm font-medium">Private & Secure</span>
               </div>
             </div>
           </div>
 
-          <div className="text-xs text-gray-500 font-medium">
+          <div className="text-xs text-[var(--text-secondary)] font-medium">
             V6 &middot; Final Architecture
           </div>
         </div>
@@ -122,9 +121,9 @@ export default function Login() {
 
       {/* RIGHT PANEL */}
       <div className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 relative">
-        <div className="w-full max-w-md bg-white sm:bg-white sm:border sm:border-[#fed7aa] sm:rounded-2xl sm:p-8 sm:shadow-xl sm:backdrop-blur-sm relative z-10 overflow-hidden">
+        <div className="w-full max-w-md bg-[var(--bg-secondary)] sm:bg-[var(--bg-secondary)] sm:border sm:border-[var(--panel-border)] sm:rounded-2xl sm:p-8 sm: sm:backdrop-blur-sm relative z-10 overflow-hidden">
           {/* Tab Toggle */}
-          <div className="flex p-1 bg-[#ffedd5] rounded-xl mb-8 border border-[#fed7aa] relative z-10">
+          <div className="flex p-1 bg-[var(--accent-light)] rounded-xl mb-8 border border-[var(--panel-border)] relative z-10">
             <button
               onClick={() => {
                 setIsLogin(true);
@@ -132,8 +131,8 @@ export default function Login() {
               }}
               className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${
                 isLogin
-                  ? "text-orange-600 shadow-sm bg-white"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "text-[var(--accent-active)]  bg-[var(--bg-secondary)]"
+                  : "text-[var(--text-secondary)] hover:text-gray-700"
               }`}
             >
               Sign In
@@ -145,8 +144,8 @@ export default function Login() {
               }}
               className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${
                 !isLogin
-                  ? "text-orange-600 shadow-sm bg-white"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "text-[var(--accent-active)]  bg-[var(--bg-secondary)]"
+                  : "text-[var(--text-secondary)] hover:text-gray-700"
               }`}
             >
               Create Account
@@ -165,7 +164,7 @@ export default function Login() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
                       Full Name
                     </label>
                     <input
@@ -174,14 +173,14 @@ export default function Login() {
                       required={!isLogin}
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full bg-white border border-[#fed7aa] rounded-xl px-4 py-3 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300 transition-all shadow-sm placeholder-gray-400"
+                      className="w-full bg-[var(--bg-secondary)] border border-[var(--panel-border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)] transition-all placeholder-gray-400"
                       placeholder="John Doe"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
                     Email Address
                   </label>
                   <input
@@ -190,13 +189,13 @@ export default function Login() {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-all shadow-sm placeholder-slate-400"
+                    className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-all placeholder-slate-400"
                     placeholder="you@example.com"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
                     Password
                   </label>
                   <input
@@ -205,13 +204,13 @@ export default function Login() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-all shadow-sm placeholder-slate-400"
+                    className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-all placeholder-slate-400"
                     placeholder="••••••••"
                   />
                 </div>
 
                 {error && (
-                  <div className="flex items-center space-x-3 bg-red-950/40 text-red-500 p-4 rounded-xl border border-red-900/50 text-sm mt-4 shadow-inner">
+                  <div className="flex items-center space-x-3 bg-red-950/40 text-red-500 p-4 rounded-xl border border-red-900/50 text-sm mt-4">
                     <AlertCircle size={18} className="shrink-0 text-red-500" />
                     <p className="font-medium">{error}</p>
                   </div>
@@ -220,7 +219,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#f97316] hover:bg-[#ea580c] flex items-center justify-center space-x-2 py-3 mt-4 rounded-xl text-white text-sm font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_25px_rgba(249,115,22,0.5)] hover:-translate-y-[1px] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                  className="w-full bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] flex items-center justify-center space-x-2 py-3 mt-4 rounded-xl text-white text-sm font-bold 0_0_20px_rgba(249,115,22,0.3)] hover:0_0_25px_rgba(249,115,22,0.5)] hover:-translate-y-[1px] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
                 >
                   {isLoading ? (
                     <span className="animate-pulse flex items-center gap-2">
@@ -244,10 +243,10 @@ export default function Login() {
 
           <div className="relative my-8 z-10">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#fed7aa]"></div>
+              <div className="w-full border-t border-[var(--panel-border)]"></div>
             </div>
-            <div className="relative flex justify-center text-xs font-semibold uppercase tracking-widest text-gray-500">
-              <span className="px-4 bg-white">
+            <div className="relative flex justify-center text-xs font-semibold uppercase tracking-widest text-[var(--text-secondary)]">
+              <span className="px-4 bg-[var(--bg-secondary)]">
                 Or continue with
               </span>
             </div>
@@ -259,7 +258,7 @@ export default function Login() {
               import.meta.env.VITE_API_URL || "http://localhost:8000/api/v3";
               window.location.href = BASE_URL + "/auth/google";
             }}
-            className="w-full bg-white text-gray-800 flex items-center justify-center space-x-3 py-3 border border-[#fed7aa] rounded-xl text-sm font-bold hover:bg-orange-50 transition-colors shadow-sm relative z-10"
+            className="w-full bg-[var(--bg-secondary)] text-[var(--text-primary)] flex items-center justify-center space-x-3 py-3 border border-[var(--panel-border)] rounded-xl text-sm font-bold hover:bg-[var(--bg-primary)] transition-colors relative z-10"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path

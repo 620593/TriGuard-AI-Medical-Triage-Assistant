@@ -293,7 +293,7 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
       {/* ── Close button ────────────────────────────────────────────────── */}
       <button
         onClick={onClose}
-        className="absolute top-5 right-5 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-all"
+        className="absolute top-5 right-5 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all"
         aria-label="Close voice interface"
       >
         <X size={22} />
@@ -352,19 +352,19 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
                 exit={{ scale: 0.8, opacity: 0 }}
                 onClick={handleMicClick}
                 disabled={isProcessing}
-                className={`relative w-36 h-36 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl focus:outline-none ${
+                className={`relative w-36 h-36 rounded-full flex items-center justify-center transition-all duration-300  focus:outline-none ${
                   isRecording
-                    ? "bg-gradient-to-b from-red-500 to-red-700 shadow-red-500/40 ring-4 ring-red-400/30"
+                    ? "   /40 ring-4 ring-red-400/30"
                     : isError
-                      ? "bg-gradient-to-b from-orange-500 to-orange-700 shadow-orange-500/40"
-                      : "bg-gradient-to-b from-teal-500 to-cyan-700 shadow-teal-500/40 hover:from-teal-400 hover:to-cyan-600 active:scale-95"
+                      ? "   /40"
+                      : "   /40 hover: hover: active:scale-95"
                 }`}
                 whileTap={{ scale: 0.93 }}
               >
                 {isError ? (
                   <AlertTriangle size={44} className="text-white" />
                 ) : (
-                  <Mic size={44} className="text-white drop-shadow-lg" />
+                  <Mic size={44} className="text-white" />
                 )}
               </motion.button>
             )}
@@ -378,7 +378,7 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             className={`text-lg font-semibold tracking-wide ${
-              isError ? "text-orange-500" : "text-slate-800"
+              isError ? "text-[var(--accent-primary)]" : "text-[var(--text-primary)]"
             }`}
           >
             {stateLabel}
@@ -395,7 +395,7 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
           )}
 
           {isError && errorMsg && (
-            <p className="text-xs text-orange-500 max-w-xs text-center mt-1">
+            <p className="text-xs text-[var(--accent-primary)] max-w-xs text-center mt-1">
               {errorMsg}
             </p>
           )}
@@ -407,12 +407,12 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-sm w-full mx-4 px-5 py-3 rounded-2xl bg-white border border-slate-200 shadow-sm"
+              className="max-w-sm w-full mx-4 px-5 py-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-color)]"
             >
-              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+              <p className="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] mb-1">
                 You said
               </p>
-              <p className="text-sm text-slate-800 leading-relaxed">
+              <p className="text-sm text-[var(--text-primary)] leading-relaxed">
                 🎙️ {transcript}
               </p>
             </motion.div>
@@ -448,7 +448,7 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               onClick={replayAudio}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 text-sm transition-all shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-secondary)] hover:bg-slate-50 border border-[var(--border-color)] text-slate-600 hover:text-slate-900 text-sm transition-all"
             >
               <RotateCcw size={14} />
               Replay
@@ -471,7 +471,7 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
                 setAudioFinished(false);
                 setElapsed(0);
               }}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-700 hover:text-teal-900 text-sm font-semibold transition-all shadow-sm"
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-700 hover:text-teal-900 text-sm font-semibold transition-all"
             >
               <Mic size={14} />
               Ask another
@@ -483,7 +483,7 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
       {/* ── Bottom hint ─────────────────────────────────────────────────────── */}
       {(isIdle || isRecording) && (
         <motion.p
-          className="absolute bottom-8 text-xs text-slate-500 tracking-wide"
+          className="absolute bottom-8 text-xs text-[var(--text-secondary)] tracking-wide"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >

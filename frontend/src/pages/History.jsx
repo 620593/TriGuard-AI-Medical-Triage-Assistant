@@ -88,11 +88,11 @@ const History = () => {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-3 text-gray-800 drop-shadow-sm">
-          <Shield className="text-orange-500 drop-shadow-sm" />
+        <h1 className="text-3xl font-bold flex items-center gap-3 text-[var(--accent-primary)]">
+          <Shield className="text-[var(--accent-primary)]" />
           Triage History
         </h1>
-        <p className="text-gray-500 mt-2 font-light">
+        <p className="text-[var(--text-secondary)] mt-2 font-light">
           View and manage your past AI health assessments.
         </p>
       </header>
@@ -101,7 +101,7 @@ const History = () => {
       <div className="flex flex-col md:flex-row gap-4 mb-8">
         <div className="relative flex-1">
           <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]"
             size={18}
           />
           <input
@@ -115,7 +115,7 @@ const History = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+        <div className="flex flex-col items-center justify-center py-20 text-[var(--text-secondary)]">
           <Loader2 className="animate-spin mb-4" size={32} />
           <p>Retrieving your encrypted health data...</p>
         </div>
@@ -132,8 +132,8 @@ const History = () => {
             ))
           ) : (
             <div className="text-center py-20 skeuo-panel p-6">
-              <FileText className="mx-auto text-gray-400 mb-4" size={48} />
-              <p className="text-gray-500">
+              <FileText className="mx-auto text-[var(--text-secondary)] mb-4" size={48} />
+              <p className="text-[var(--text-secondary)]">
                 No medical reports found matching your criteria.
               </p>
             </div>
@@ -162,15 +162,15 @@ const ReportCard = ({ report, onDelete, isDeleting }) => {
     >
       <div className="flex items-center gap-4">
         <div
-          className={`p-3 rounded-2xl backdrop-blur-md border ${data?.risk_level === "CRITICAL" ? "bg-red-50 text-red-600 border-red-200" : "bg-[#ffedd5] text-orange-600 border-[#fed7aa]"}`}
+          className={`p-3 rounded-2xl backdrop-blur-md border ${data?.risk_level === "CRITICAL" ? "bg-red-50 text-red-600 border-red-200" : "bg-[var(--accent-light)] text-[var(--accent-active)] border-[var(--panel-border)]"}`}
         >
           <Activity size={24} />
         </div>
         <div>
-          <h3 className="font-bold text-lg leading-tight text-gray-800">
+          <h3 className="font-bold text-lg leading-tight text-[var(--accent-primary)]">
             {data?.symptoms?.slice(0, 3).join(", ") || "General Assessment"}
           </h3>
-          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1 uppercase font-bold tracking-wider">
+          <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)] mt-1 uppercase font-bold tracking-wider">
             <span className="flex items-center gap-1">
               <Calendar size={12} /> {date}
             </span>
@@ -181,7 +181,7 @@ const ReportCard = ({ report, onDelete, isDeleting }) => {
       <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
         <div className="text-right">
           <RiskBadge level={data?.risk_level} />
-          <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold">
+          <p className="text-[10px] text-[var(--text-secondary)] mt-1 uppercase font-bold">
             SCORE: {data?.risk_score || "N/A"}/10
           </p>
         </div>

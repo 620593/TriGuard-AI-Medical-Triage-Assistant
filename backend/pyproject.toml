@@ -26,7 +26,7 @@ dependencies = [
     # ── V3: HTTP requests (for HuggingFace API) ─────────────────
     "requests>=2.31.0",
     # ── V3: Gemini API (for nutrition_node) ─────────────────────
-    "google-generativeai>=0.8.0",
+    "google-genai>=0.7.0",
     "pyjwt>=2.11.0",
     "passlib[bcrypt]>=1.7.4",
     "email-validator>=2.3.0",

@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, H
 from pydantic import BaseModel, field_validator
 from backend.src.logging.logger import get_logger, LatencyTracker
 from backend.src.tools.mongodb_tool import (
-    list_user_sessions, list_user_reports, delete_user_report, create_session
+    list_user_sessions, list_user_reports, delete_user_report, create_session, load_user_session
 )
 from backend.src.tools.whisper_tool import transcribe_audio
 from backend.src.tools.tts_tool import text_to_speech
@@ -98,9 +98,10 @@ class TriageResponse(BaseModel):
 
 class ImageResponse(BaseModel):
     summary: str
+    response: str                        # Same as summary — for rich card rendering
     vision_findings: dict
     risk_level: str
-    disclaimer: str = "Disclaimer: This is not a diagnosis. Consult a doctor."
+    disclaimer: str = "This is AI-assisted screening — not a diagnosis. Always consult a doctor."
 
 # MIME signature bytes for audio validation
 _AUDIO_SIGNATURES = [
@@ -288,8 +289,14 @@ async def image_endpoint(
             result = await app_graph.ainvoke(state)
 
         assistant_msgs = [m for m in result.get("messages", []) if m.get("role") == "assistant"]
+        summary_text = (
+            result.get("final_response")
+            or result.get("formatted_response")
+            or (assistant_msgs[-1]["content"] if assistant_msgs else "Vision analysis complete.")
+        )
         return ImageResponse(
-            summary=assistant_msgs[-1]["content"] if assistant_msgs else "Vision analysis complete.",
+            summary=summary_text,
+            response=summary_text,
             vision_findings=result.get("vision_findings", {}),
             risk_level=result.get("risk_level", "low")
         )
@@ -337,8 +344,14 @@ async def xray_endpoint(
             result = await app_graph.ainvoke(state)
 
         assistant_msgs = [m for m in result.get("messages", []) if m.get("role") == "assistant"]
+        summary_text = (
+            result.get("final_response")
+            or result.get("formatted_response")
+            or (assistant_msgs[-1]["content"] if assistant_msgs else "X-ray analysis complete.")
+        )
         return ImageResponse(
-            summary=assistant_msgs[-1]["content"] if assistant_msgs else "X-ray analysis complete.",
+            summary=summary_text,
+            response=summary_text,
             vision_findings=result.get("vision_findings", {}),
             risk_level=result.get("risk_level", "low")
         )
@@ -364,6 +377,7 @@ async def voice_endpoint(
     user_id: str = Form("anonymous"),
     session_id: Optional[str] = Form(None),
     language: Optional[str] = Form("en"),
+    user_consent_for_call: bool = Form(False),
     req: Request = None,
     current_user_id: str = Depends(get_current_user_id)
 ):
@@ -421,7 +435,7 @@ async def voice_endpoint(
 
         state = _build_initial_state(
             transcribed_text, "voice", session_id or "", valid_uid, detected_lang,
-            user_consent_for_call=True,
+            user_consent_for_call=user_consent_for_call,
         )
         app_graph = req.app.state.graph
         result    = await app_graph.ainvoke(state)
@@ -464,6 +478,28 @@ async def health():
 async def get_sessions(user_id: str = Depends(get_current_user_id)):
     """Lists current user active sessions."""
     return await list_user_sessions(user_id)
+
+
+@router.get("/sessions/{session_id}/chat")
+async def get_session_chat(session_id: str, user_id: str = Depends(get_current_user_id)):
+    """Returns saved chat messages for a specific user-owned session."""
+    session_doc = await load_user_session(session_id, user_id)
+    if not session_doc:
+        raise HTTPException(status_code=404, detail="Session not found.")
+
+    state = session_doc.get("state", {}) or {}
+    messages = state.get("chat_transcript") or state.get("messages", []) or []
+    filtered_messages = [
+        {"role": m.get("role", ""), "content": m.get("content", "")}
+        for m in messages
+        if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip()
+    ]
+
+    return {
+        "session_id": session_doc.get("_id", session_id),
+        "message_count": len(filtered_messages),
+        "messages": filtered_messages,
+    }
 
 @router.get("/reports")
 async def get_reports(user_id: str = Depends(get_current_user_id)):

@@ -31,7 +31,7 @@ pytesseract>=0.3.10
 requests>=2.31.0
 
 # ── Gemini API (nutrition_node) ──────────────────────────────
-google-generativeai>=0.8.0
+google-genai>=0.7.0
 
 # ── Auth ─────────────────────────────────────────────────────
 pyjwt>=2.11.0

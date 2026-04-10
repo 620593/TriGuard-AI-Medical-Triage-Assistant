@@ -71,6 +71,7 @@ export const triageAPI = {
 
   // History & Reports
   getSessions: () => client.get("/sessions"),
+  getSessionChat: (sessionId) => client.get(`/sessions/${sessionId}/chat`),
   getReports: () => client.get("/reports"),
   deleteReport: (reportId) => client.delete(`/reports/${reportId}`),
 

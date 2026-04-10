@@ -130,6 +130,26 @@ def red_flag_engine_node(state: TriageState) -> TriageState:
         log_event(logger, "red_flag_skipped", reason="empty_search_text")
         return state
 
+    # FIX #6 — Escalation override: critical symptom clusters force risk=high, urgency=urgent
+    _CRITICAL_OVERRIDES = [
+        ("chest pain",           "high", "urgent"),
+        ("chest ache",           "high", "urgent"),
+        ("breathing difficulty", "high", "urgent"),
+        ("difficulty breathing", "high", "urgent"),
+        ("severe bleeding",      "high", "urgent"),
+        ("cannot breathe",       "high", "emergency"),
+        ("heart attack",         "high", "emergency"),
+        ("severe chronic disease", "high", "emergency"),
+    ]
+    for keyword, forced_risk, forced_urgency in _CRITICAL_OVERRIDES:
+        if keyword in search_text:
+            state["risk_level"] = forced_risk
+            state["urgency"]    = forced_urgency
+            state["red_flag_triggered"] = True
+            log_event(logger, "red_flag_critical_override",
+                      keyword=keyword, forced_risk=forced_risk, forced_urgency=forced_urgency)
+            return state
+
     current_risk   = state.get("risk_level", "low").lower()
     triggered      = False
     final_urgency  = _determine_urgency(search_text, rules)

@@ -19,6 +19,41 @@ from backend.src.utils.language_utils import normalize_language_code
 
 logger = get_logger("text_to_speech")
 
+# FIX #11 — Symbols and patterns to strip before TTS
+import re as _re
+_EMOJI_PATTERN = _re.compile(
+    "["
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F300-\U0001F5FF"  # symbols & pictographs
+    "\U0001F680-\U0001F6FF"  # transport & map
+    "\U0001F1E0-\U0001F1FF"  # flags
+    "\U00002702-\U000027B0"  # dingbats
+    "\U000024C2-\U0001F251"  # enclosed chars
+    "]+",
+    flags=_re.UNICODE,
+)
+_SYMBOL_PATTERN = _re.compile(r"[\u2192\u2022\u26a0\u2714\u2718\u25cf\u2013\u2014\u00b0\u2019\u201c\u201d\u2018#*_`>|~]+")
+_MARKDOWN_PATTERN = _re.compile(r"\*{1,3}([^*]+)\*{1,3}")  # bold/italic
+
+
+def _clean_for_tts(text: str) -> str:
+    """FIX #11 — Strip emojis, symbols, and markdown for natural TTS output."""
+    # Remove markdown bold/italic
+    text = _MARKDOWN_PATTERN.sub(r"\1", text)
+    # Remove emojis
+    text = _EMOJI_PATTERN.sub(" ", text)
+    # Remove arrows, bullets, warning signs, other symbols
+    text = _SYMBOL_PATTERN.sub(" ", text)
+    # Replace common markdown/text noise
+    text = text.replace("\u2192", " to ")  # →
+    text = text.replace("\u2022", ".")       # •
+    text = text.replace("\u26a0", "Warning:")
+    text = text.replace("```", "")
+    # Collapse multiple spaces / newlines
+    text = _re.sub(r" {2,}", " ", text)
+    text = _re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
 
 async def text_to_speech_node(state: TriageState) -> TriageState:
     """
@@ -42,6 +77,9 @@ async def text_to_speech_node(state: TriageState) -> TriageState:
     if not text.strip():
         log_event(logger, "tts_skipped", reason="no_text_to_synthesize")
         return state
+
+    # FIX #11 — Clean text before TTS: remove emojis, symbols, markdown
+    text = _clean_for_tts(text)
 
     result = await asyncio.to_thread(
         synthesize_speech,

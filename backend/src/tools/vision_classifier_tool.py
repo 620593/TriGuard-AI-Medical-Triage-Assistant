@@ -80,68 +80,66 @@ def _normalize_image_to_data_url(image_input: Any) -> str:
 
 def _build_body_prompt() -> str:
     """
-    # 🔥 UPGRADE V5 (P4.1 fix): Single unified prompt for ALL image types.
-    Returns full document metadata fields when image_type=="document",
-    and rich clinical detail for skin/xray/unknown.
-    This eliminates the sequential second API call for documents.
+    V6 UPGRADE: Modality-aware, region-restricted, user-friendly prompt.
+    - Restricts analysis ONLY to the visible region in the image.
+    - Explanation uses plain English (no medical jargon).
+    - Explicitly forbids mentioning unrelated body regions.
     """
     return (
-        "You are a board-certified medical image analyst assistant. "
-        "Analyze this medical image thoroughly and categorize image_type as: "
-        "'skin', 'xray', 'document', or 'unknown'.\n\n"
+        "You are a careful medical image analysis assistant. "
+        "Analyze the provided medical image step by step.\n\n"
 
-        "FOR SKIN IMAGES — You MUST describe ALL of the following in detail:\n"
-        "  PRIMARY LESION MORPHOLOGY: macule, papule, plaque, vesicle, pustule, "
-        "nodule, wheal, ulcer, crust, scale, etc.\n"
-        "  COLOR: exact color(s) — erythematous (red), hyperpigmented (dark), "
-        "hypopigmented (light), violaceous (purple), yellow, brown, etc.\n"
-        "  DISTRIBUTION: localized vs. diffuse, unilateral vs. bilateral, "
-        "body region affected, dermatomal, symmetrical, follicular, etc.\n"
-        "  SIZE & SHAPE: estimated diameter, round/oval/irregular/linear/annular.\n"
-        "  SURFACE TEXTURE: smooth, rough, scaly, crusted, weeping, lichenified.\n"
-        "  BORDERS: well-defined, poorly defined, serpiginous, raised, flat.\n"
-        "  SECONDARY CHANGES: excoriations, post-inflammatory marks, satellite lesions.\n"
-        "  SEVERITY: mild / moderate / severe based on extent and appearance.\n"
-        "  POSSIBLE CONDITIONS: list 3-5 conditions this COULD be consistent with "
-        "(use hedged language: 'may suggest', 'could be consistent with').\n\n"
+        "STEP 1 — Identify the image type: 'skin', 'xray', 'document', or 'unknown'.\n"
+        "STEP 2 — Identify the EXACT body region visible in the image.\n"
+        "STEP 3 — Analyze ONLY what is visible in that specific region. "
+        "NEVER mention organs or body parts NOT visible in the image.\n\n"
 
-        "FOR X-RAY IMAGES — describe:\n"
-        "  Body region, density changes, opacities, consolidations, fractures, "
-        "effusions, cardiomegaly, bone abnormalities, air under diaphragm, etc.\n\n"
+        "FOR SKIN IMAGES (analyze only the skin area shown):\n"
+        "  - Describe any spots, rashes, bumps, patches in plain English.\n"
+        "  - Color: red, dark, light, mixed, patchy.\n"
+        "  - Distribution: which body part, how widespread.\n"
+        "  - Size: small (coin-size) or larger.\n"
+        "  - Surface: dry, moist, rough, smooth.\n"
+        "  - Severity: mild / moderate / severe.\n"
+        "  - 3-5 possible skin conditions (use: 'this may suggest...').\n\n"
 
-        "RULES (ALL image types):\n"
-        "- Use uncertainty-based language ALWAYS (may, could, might, appears to).\n"
-        "- NEVER confirm a diagnosis or prescribe medication.\n"
+        "FOR X-RAY IMAGES (analyze only the specific region in frame):\n"
+        "  - Name the EXACT visible area (e.g., left knee joint, wrist bones, chest cavity).\n"
+        "  - If it is a LEG/KNEE/FOOT/ANKLE xray: discuss ONLY bones and joints of that limb.\n"
+        "  - If it is a CHEST xray: discuss ONLY lungs, ribs, heart shadow — nothing else.\n"
+        "  - If it is a HAND/ARM/SHOULDER xray: discuss ONLY that arm region.\n"
+        "  - NEVER mention or comment on regions outside the visible frame.\n\n"
+
+        "CRITICAL RULES (all image types):\n"
+        "- Use uncertainty language: 'may suggest', 'could indicate', 'appears to show'.\n"
+        "- NEVER confirm a diagnosis. NEVER use 'you have'.\n"
         "- NEVER invent findings not visible in the image.\n"
-        "- If confidence is low (< 0.6), note that a clearer image would help.\n"
-        "- Always end explanation with: 'This is an automated analysis, not a "
-        "diagnosis. Please consult a qualified healthcare professional.'\n\n"
+        "- NEVER mention body parts or organs outside the detected region.\n"
+        "- Explanation field MUST use plain, everyday English. "
+        "Replace: lesion→spot/patch, erythema→redness, pruritus→itching, "
+        "opacity→cloudiness, consolidation→thickening, fracture→break/crack.\n"
+        "- Tone: warm and calm like a caring friend, not a clinical report.\n\n"
 
-        "If image_type == 'document', ALSO populate these document fields:\n"
-        "  document_type: one of prescription | lab_report | discharge_summary | "
-        "doctor_note | insurance_form | diagnostic_report | other\n"
-        "  org_name: visible clinic/hospital name, or 'not_visible'\n"
-        "  is_handwritten: true if any handwritten text is visible\n"
-        "  medications_listed: true if medication names/dosages visible\n"
-        "  patient_details_visible: true if patient name/DOB/ID visible\n"
-        "  NEVER read out or repeat patient personal details.\n\n"
+        "FOR DOCUMENTS: populate document_type, org_name, is_handwritten, "
+        "medications_listed, patient_details_visible.\n\n"
 
         "Return ONLY valid JSON (no markdown, no code fences):\n"
         "{\n"
         '  "image_type": "skin | xray | document | unknown",\n'
-        '  "document_type": "prescription | lab_report | ... (document only, else null)",\n'
-        '  "org_name": "clinic name or not_visible (document only, else null)",\n'
-        '  "is_handwritten": true or false (document only, else null),\n'
-        '  "medications_listed": true or false (document only, else null),\n'
-        '  "patient_details_visible": true or false (document only, else null),\n'
-        '  "visual_findings": [\'Detailed finding 1 (e.g. erythematous plaques with silvery scales)\', \'Finding 2\', ...],\n'
-        '  "lesion_morphology": "primary lesion type (skin only, else null)",\n'
-        '  "color_description": "exact color(s) observed (skin only, else null)",\n'
-        '  "distribution": "body region and pattern (skin/xray only, else null)",\n'
-        '  "severity": "mild | moderate | severe (skin/xray only, else null)",\n'
+        '  "body_region": "exact region visible, e.g. left knee, chest, lower back skin",\n'
+        '  "document_type": "null or prescription | lab_report | discharge_summary | etc",\n'
+        '  "org_name": "null or clinic name",\n'
+        '  "is_handwritten": null or true or false,\n'
+        '  "medications_listed": null or true or false,\n'
+        '  "patient_details_visible": null or true or false,\n'
+        '  "visual_findings": ["plain-English finding 1", "finding 2"],\n'
+        '  "lesion_morphology": "null or plain-language lesion description",\n'
+        '  "color_description": "null or color description",\n'
+        '  "distribution": "null or body area and pattern",\n'
+        '  "severity": "null | mild | moderate | severe",\n'
         '  "possible_conditions": ["condition 1", "condition 2", "condition 3"],\n'
         '  "confidence": 0.0 to 1.0,\n'
-        '  "explanation": "Comprehensive 4-6 sentence clinical description covering morphology, color, distribution, severity, possible differentials, and disclaimer..."\n'
+        '  "explanation": "3-5 sentence plain-English summary for a non-medical person. ONLY discuss the visible region. No jargon."\n'
         "}"
     )
 

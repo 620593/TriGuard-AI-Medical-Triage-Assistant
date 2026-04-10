@@ -130,6 +130,31 @@ def test_image_endpoint_rejects_invalid_user_id(client):
     assert resp.status_code == 400
 
 
+def test_image_endpoint_returns_graph_final_response(client, mock_graph):
+    """Image route should return final_response/structured text when graph provides it."""
+    mock_graph.ainvoke = AsyncMock(return_value={
+        "messages": [
+            {"role": "user", "content": "Analyze this medical image"},
+            {"role": "assistant", "content": "Short summary"},
+        ],
+        "final_response": "### 🧾 Symptoms Identified\n\n• rash\n\n---\n\n### 🩺 Possible Conditions\n\nPossible causes include eczema.",
+        "risk_level": "low",
+        "vision_findings": {"image_type": "skin"},
+    })
+
+    small_image = b"\xff\xd8\xff\xe0" + b"\x00" * 50
+    resp = client.post(
+        "/api/v3/image",
+        files={"image": ("test.jpg", small_image, "image/jpeg")},
+        data={"user_id": "test-user", "image_type_hint": "body"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["summary"].startswith("### 🧾 Symptoms Identified")
+    assert body["response"].startswith("### 🧾 Symptoms Identified")
+
+
 # ── /sessions ─────────────────────────────────────────────────────────────
 
 @patch("backend.src.api.routes.list_user_sessions", new_callable=AsyncMock,
@@ -208,7 +233,7 @@ def test_voice_endpoint_uses_graph_audio_and_normalized_language(mock_transcribe
 
     graph_state = mock_graph.ainvoke.await_args.args[0]
     assert graph_state["language"] == "en"
-    assert graph_state["user_consent_for_call"] is True
+    assert graph_state["user_consent_for_call"] is False
 
 
 @patch("backend.src.api.routes.text_to_speech", return_value="fallback.mp3")
@@ -242,4 +267,36 @@ def test_voice_endpoint_falls_back_to_route_tts_with_normalized_language(mock_tr
     assert body["audio_path"] == "fallback.mp3"
     assert body["audio_url"].endswith("/static/audio/fallback.mp3")
     mock_tts.assert_called_once_with("Please seek urgent care now.", "en")
+
+
+@patch("backend.src.api.routes.text_to_speech", return_value="")
+@patch("backend.src.api.routes.transcribe_audio")
+def test_voice_endpoint_respects_explicit_call_consent(mock_transcribe, mock_tts, client, mock_graph):
+    """Voice route must forward explicit user_consent_for_call=True when provided."""
+    mock_transcribe.return_value = {
+        "text": "I have severe chest pain",
+        "language": "English",
+    }
+    mock_graph.ainvoke = AsyncMock(return_value={
+        "messages": [
+            {"role": "user", "content": "I have severe chest pain"},
+            {"role": "assistant", "content": "Please seek urgent care now."},
+        ],
+        "session_id": "voice-session",
+        "risk_level": "high",
+        "final_response": "Please seek urgent care now.",
+        "audio_url": "graph-generated.mp3",
+    })
+
+    audio_bytes = b"RIFF" + b"\x00" * 64
+    resp = client.post(
+        "/api/v3/voice",
+        files={"audio": ("sample.wav", audio_bytes, "audio/wav")},
+        data={"user_id": "voice-user", "language": "English", "user_consent_for_call": "true"},
+    )
+
+    assert resp.status_code == 200
+    graph_state = mock_graph.ainvoke.await_args.args[0]
+    assert graph_state["user_consent_for_call"] is True
+    mock_tts.assert_not_called()
 

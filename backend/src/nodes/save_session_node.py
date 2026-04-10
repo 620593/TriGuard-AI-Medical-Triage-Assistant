@@ -25,6 +25,9 @@ from backend.src.pipeline_config import STATELESS_INPUT_MODES
 
 logger = get_logger("save_session")
 
+_MAX_CONTEXT_MESSAGES = 20
+_MAX_TRANSCRIPT_MESSAGES = 200
+
 # Fields that must never be persisted to MongoDB
 _STRIP_FIELDS = frozenset({
     "image_input", "audio_input", "image_type_hint",
@@ -68,7 +71,8 @@ async def save_session_node(state: TriageState) -> TriageState:
 
     # All fields needed by load_history_node on the next turn
     updates = {
-        "messages":               state.get("messages", [])[-20:],   # Rolling 20-message window
+        "messages":               state.get("messages", [])[-_MAX_CONTEXT_MESSAGES:],
+        "chat_transcript":        state.get("messages", [])[-_MAX_TRANSCRIPT_MESSAGES:],
         "symptoms":               state.get("symptoms", []),
         "last_symptoms":          state.get("last_symptoms", []) or state.get("symptoms", []),
         "risk_score":             state.get("risk_score", 0.0),

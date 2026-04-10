@@ -1,8 +1,10 @@
 """
-judge_validator_node.py  (Version 4)
---------------------------------------
+judge_validator_node.py  (Version 5 — Hallucination Fallback)
+--------------------------------------------------------------
 Second-pass LLM that validates the primary LLaMA response against:
     1. Retrieved Tavily information (grounding check).
+
+FIX #7: On max retries, use a safe clinical fallback instead of force-accepting.
     2. Risk evaluation output (consistency check).
     3. Anti-hallucination policy (no invented diseases, no prescriptions).
 
@@ -23,8 +25,14 @@ import asyncio
 
 logger = get_logger("judge_validator")
 
-# Maximum regeneration attempts before force-accepting the response
+# FIX #7 — Maximum regeneration attempts before emitting safe fallback
 MAX_REGENERATION_ATTEMPTS = 2
+
+# FIX #7 — Safe fallback when hallucination persists after max retries
+_SAFE_FALLBACK_RESPONSE = (
+    "I'm not fully confident about this. "
+    "Please consult a doctor for a proper assessment."
+)
 
 
 def _sanitize_for_prompt(text: str, max_length: int = 500) -> str:
@@ -113,15 +121,20 @@ async def judge_validator_node(state: TriageState) -> TriageState:
         max_length=400
     )
 
-    # ── Validation prompt ──────────────────────────────────────────────────────
+    # ── FIX #7 — Validation prompt with forbidden diagnosis patterns ───────────
     judge_prompt = (
         "You are a STRICT medical triage quality validator.\n\n"
         "Check if the RESPONSE violates ANY of these rules:\n"
         "1. Mentions disease names NOT found in the CONTEXT.\n"
         "2. Prescribes specific medication or dosage.\n"
-        "3. Gives a definitive diagnosis (e.g., 'You have X').\n"
+        "3. Gives a definitive diagnosis (e.g., 'You have X', 'This is X', 'looks like you have').\n"
         "4. Risk level in response contradicts the ASSESSED RISK.\n"
         "5. Invents symptoms the patient did NOT report.\n\n"
+        "FORBIDDEN language patterns (auto-FAIL):\n"
+        "  - 'You have [disease]'\n"
+        "  - 'This is [disease]'\n"
+        "  - 'It looks like you have'\n"
+        "ALLOWED language: 'This could be due to...', 'Possible causes include...', 'may be consistent with'\n\n"
         f"CONTEXT (from medical search): {safe_context}\n"
         f"ASSESSED RISK: {risk_level} ({risk_score}/10)\n"
         f"RESPONSE TO VALIDATE:\n{safe_response}\n\n"
@@ -154,16 +167,22 @@ async def judge_validator_node(state: TriageState) -> TriageState:
               regeneration_count=state["regeneration_count"],
               escalation_flag=True)
 
-    # If we've exhausted regeneration attempts, force-accept with a warning
+    # FIX #7 — Exhausted retries: emit clinical safe fallback (NEVER force-accept)
     if state["regeneration_count"] >= MAX_REGENERATION_ATTEMPTS:
-        # Keep judge_passed as False — use force_accepted to signal acceptance
-        state["judge_passed"] = False
+        state["judge_passed"] = True          # allow pipeline to continue
         state["force_accepted"] = True
-        state["validated_response"] = current_response
-        state["needs_nutrition_image"] = risk_level.lower() in ("low", "moderate")
-        state["judge_feedback"] = f"Force-accepted after {MAX_REGENERATION_ATTEMPTS} attempts. Last issue: {verdict}"
-        log_event(logger, "judge_force_accepted",
+        state["validated_response"] = _SAFE_FALLBACK_RESPONSE  # safe text only
+        state["needs_nutrition_image"] = False  # no nutrition for fallback path
+        state["judge_feedback"] = f"Fallback used after {MAX_REGENERATION_ATTEMPTS} failed attempts."
+        # Replace the last assistant message with the safe fallback
+        messages = state.get("messages", [])
+        if messages:
+            for i in range(len(messages) - 1, -1, -1):
+                if messages[i].get("role") == "assistant":
+                    messages[i] = {**messages[i], "content": _SAFE_FALLBACK_RESPONSE}
+                    break
+        log_event(logger, "judge_safe_fallback_used",
                   reason="max_regenerations_reached",
-                  feedback=verdict[:100])  # Truncate feedback in logs
+                  feedback=verdict[:100])
 
     return state

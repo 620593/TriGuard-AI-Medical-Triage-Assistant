@@ -25,6 +25,7 @@ import VoiceToggle from "../components/VoiceToggle";
 import VoiceInterface from "../components/VoiceInterface";
 import TriageResponseCard from "../components/TriageResponseCard";
 import XrayResultCard from "../components/XrayResultCard";
+import MarkdownResponseCard from "../components/MarkdownResponseCard";
 
 /** Sanitize once at creation time and convert newlines to <br/> */
 const sanitize = (text) =>
@@ -331,10 +332,8 @@ const TriageChat = () => {
 
       if (data.session_id) setSessionID(data.session_id);
 
-      let content = data.summary || data.analysis || data.response;
-      if (data.nutrition_advice) {
-        content += `\n\n### 🍎 Dietary Advice\n${data.nutrition_advice}`;
-      }
+      // Use the formatted response (with ### sections) if available, else fallback to summary
+      const content = data.response || data.summary || data.analysis || "Analysis complete.";
 
       setMessages((prev) =>
         [
@@ -345,7 +344,9 @@ const TriageChat = () => {
             content: content,
             html: sanitize(content),
             risk: data.risk_level,
-            type: type === "xray" ? "xray" : "text",
+            // Always use "text" type so MarkdownResponseCard can render the ### sections
+            // XrayResultCard is still available but bypassed for the new formatted format
+            type: "text",
             imageUrl: triageAPI.getStaticNutritionUrl(
               data.nutrition_image || data.image_url,
             ),
@@ -553,7 +554,9 @@ const TriageChat = () => {
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`flex max-w-[80%] ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} items-start gap-3`}
+                  className={`flex ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} items-start gap-3 ${
+                    msg.role === "assistant" ? "max-w-[92%]" : "max-w-[80%]"
+                  }`}
                 >
                   <div
                     className={`p-2 skeuo-panel !rounded-full shrink-0 flex items-center justify-center w-10 h-10`}
@@ -575,17 +578,17 @@ const TriageChat = () => {
                         : "skeuo-panel rounded-2xl rounded-tl-none font-medium text-slate-100"
                     }`}
                   >
+                    {/* Risk badge — show for all assistant messages with a risk level */}
                     {msg.risk &&
                       msg.role === "assistant" &&
-                      !msg.parsed &&
                       msg.type !== "xray" &&
                       msg.type !== "voice" && (
-                        <div className="mb-2">
+                        <div className="mb-3">
                           <RiskBadge level={msg.risk} />
                         </div>
                       )}
 
-                    {/* Assistant message: use rich card if parsed, else raw HTML */}
+                    {/* Assistant message rendering */}
                     {msg.role === "assistant" && msg.parsed ? (
                       <TriageResponseCard
                         parsed={msg.parsed}
@@ -595,6 +598,9 @@ const TriageChat = () => {
                       />
                     ) : msg.role === "assistant" && msg.type === "xray" ? (
                       <XrayResultCard text={msg.content} riskLevel={msg.risk} />
+                    ) : msg.role === "assistant" && msg.content && msg.content.includes("###") ? (
+                      // New 7-section format — use rich card renderer
+                      <MarkdownResponseCard text={msg.content} riskLevel={msg.risk} />
                     ) : (
                       <p
                         className="whitespace-pre-wrap text-sm leading-relaxed"

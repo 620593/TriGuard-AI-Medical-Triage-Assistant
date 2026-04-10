@@ -12,6 +12,7 @@ import {
   FileText,
   Search,
   Trash2,
+  X,
 } from "lucide-react";
 import { triageAPI } from "../api/client";
 import RiskBadge from "../components/RiskBadge";
@@ -22,6 +23,9 @@ const History = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isDeleting, setIsDeleting] = useState(null);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [chatError, setChatError] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,6 +89,41 @@ const History = () => {
     });
   });
 
+  const handleOpenChat = async (report) => {
+    const sessionId = report?.session_id;
+    if (!sessionId) {
+      setSelectedChat({
+        sessionId: "",
+        messages: [],
+        title: "No conversation data found for this report.",
+      });
+      return;
+    }
+
+    setIsChatLoading(true);
+    setChatError("");
+
+    try {
+      const res = await triageAPI.getSessionChat(sessionId);
+      const messages = res?.data?.messages || [];
+      setSelectedChat({
+        sessionId,
+        messages,
+        title: `Conversation (${messages.length} messages)`,
+      });
+    } catch (err) {
+      console.error("Failed to load session chat:", err);
+      setChatError("Could not load full chat history for this report.");
+      setSelectedChat({
+        sessionId,
+        messages: [],
+        title: "Conversation unavailable",
+      });
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <header className="mb-8">
@@ -126,6 +165,7 @@ const History = () => {
               <ReportCard
                 key={report._id}
                 report={report}
+                onOpenChat={() => handleOpenChat(report)}
                 onDelete={(e) => handleDelete(report._id, e)}
                 isDeleting={isDeleting === report._id}
               />
@@ -140,11 +180,69 @@ const History = () => {
           )}
         </div>
       )}
+
+      {selectedChat && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl max-h-[85vh] skeuo-panel p-5 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-700/50 pb-3">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  {selectedChat.title}
+                </h2>
+                {selectedChat.sessionId && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Session: {selectedChat.sessionId}
+                  </p>
+                )}
+              </div>
+              <button
+                className="p-2 rounded-full bg-slate-700/40 text-slate-300 hover:bg-slate-700/70"
+                onClick={() => setSelectedChat(null)}
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto pr-1 space-y-3">
+              {isChatLoading ? (
+                <div className="py-10 text-center text-slate-400 flex flex-col items-center gap-3">
+                  <Loader2 className="animate-spin" size={24} />
+                  <p>Loading full chat history...</p>
+                </div>
+              ) : chatError ? (
+                <p className="text-red-300 text-sm">{chatError}</p>
+              ) : selectedChat.messages.length === 0 ? (
+                <p className="text-slate-400 text-sm">
+                  No saved chat messages for this session.
+                </p>
+              ) : (
+                selectedChat.messages.map((m, idx) => {
+                  const isUser = m.role === "user";
+                  return (
+                    <div
+                      key={`${m.role}-${idx}`}
+                      className={`p-3 rounded-xl border ${isUser ? "bg-slate-800/60 border-slate-700 text-slate-100" : "bg-teal-500/10 border-teal-500/30 text-slate-100"}`}
+                    >
+                      <p className="text-[10px] uppercase tracking-wider mb-1 text-slate-400 font-bold">
+                        {isUser ? "You" : "TriGuard"}
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {m.content}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const ReportCard = ({ report, onDelete, isDeleting }) => {
+const ReportCard = ({ report, onOpenChat, onDelete, isDeleting }) => {
   const { created_at, report: data } = report;
   const date = new Date(created_at).toLocaleDateString("en-US", {
     month: "short",
@@ -158,6 +256,7 @@ const ReportCard = ({ report, onDelete, isDeleting }) => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      onClick={onOpenChat}
       className="skeuo-panel p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:-translate-y-1 transition-transform cursor-pointer"
     >
       <div className="flex items-center gap-4">

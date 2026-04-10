@@ -98,6 +98,9 @@ from backend.src.nodes.emergency_escalation_node   import emergency_escalation_n
 from backend.src.nodes.text_to_speech_node         import text_to_speech_node
 from backend.src.nodes.save_history_node           import save_history_node
 from backend.src.nodes.save_session_node           import save_session_node
+from backend.src.nodes.followup_node               import followup_node
+from backend.src.nodes.mental_health_node          import mental_health_node
+from backend.src.nodes.vision_symptom_bridge_node  import vision_symptom_bridge_node
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -110,20 +113,34 @@ def _route_by_intent(state: TriageState) -> str:
     Routes to the correct pipeline entry point based on classification result.
     Returns a graph node name.
     """
+    intent = state.get("intent", "medical_text")
     return {
         "medical_text":   "symptom_extraction",
         "medical_report": "ocr_scan",
         "xray":           "xray_analysis",
         "body_image":     "medical_vision",
-        "casual":         "risk_evaluation",   # casual: skip symptom/retrieval, go direct
-    }.get(state.get("intent", "medical_text"), "symptom_extraction")
+        "casual":         "mental_health",    # casual: mental health / chat node
+    }.get(intent, "symptom_extraction")
 
 
 def _route_after_symptom_extraction(state: TriageState) -> str:
     """
-    Routes to disease_retrieval if symptoms found, else skips to risk_evaluation.
-    Guard: heavy node only runs when symptoms exist.
+    After symptom extraction, always run the followup check node.
+    followup_node decides whether to ask a question or proceed.
     """
+    return "followup_check"
+
+
+def _route_after_followup(state: TriageState) -> str:
+    """
+    After followup_node:
+    - ask_followup or history_response → response (return to user immediately)
+    - Otherwise → disease_retrieval (or risk_evaluation if no symptoms)
+    """
+    next_action = state.get("next_action", "")
+    if next_action in ("ask_followup", "history_response"):
+        return "response"
+    # Proceed with pipeline — route based on symptoms
     return "disease_retrieval" if state.get("symptoms") else "risk_evaluation"
 
 
@@ -147,7 +164,7 @@ def _route_after_vision(state: TriageState) -> str:
         return "ocr_scan"
     if state.get("intent", "") == "medical_report":
         return "ocr_scan"
-    return "risk_evaluation"
+    return "vision_bridge"
 
 
 def _route_after_risk_evaluation(state: TriageState) -> str:
@@ -177,8 +194,8 @@ def _route_after_judge(state: TriageState) -> str:
 def _route_nutrition_check(state: TriageState) -> str:
     if (
         state.get("trigger_nutrition_node") is True
-        and state.get("risk_level") in ("low", "moderate")
-        and state.get("urgency") != "emergency"
+        and state.get("risk_level") in ("low", "moderate", "high")
+        and state.get("urgency") not in ("emergency", "critical")
         and not state.get("red_flag_triggered", False)
     ):
         return "nutrition"
@@ -208,13 +225,20 @@ def build_triage_graph() -> StateGraph:
 
     # Medical text pipeline
     graph.add_node("symptom_extraction",   symptom_extraction_node)
+    graph.add_node("followup_check",       followup_node)          # LLM follow-up
     graph.add_node("disease_retrieval",    disease_retrieval_node)
     graph.add_node("tavily_retrieval",     tavily_retrieval_node)
+
+    # Mental health / casual chat
+    graph.add_node("mental_health",        mental_health_node)
 
     # Vision pipelines
     graph.add_node("medical_vision",       medical_vision_node)
     graph.add_node("ocr_scan",             ocr_scan_node)
     graph.add_node("xray_analysis",        xray_analysis_node)
+
+    # Vision symptom bridge: converts visual findings → symptom list for full pipeline
+    graph.add_node("vision_bridge",        vision_symptom_bridge_node)
 
     # Risk + red flag
     graph.add_node("risk_evaluation",      risk_evaluation_node)
@@ -253,15 +277,22 @@ def build_triage_graph() -> StateGraph:
             "ocr_scan":           "ocr_scan",
             "xray_analysis":      "xray_analysis",
             "medical_vision":     "medical_vision",
-            "risk_evaluation":    "risk_evaluation",
+            "mental_health":      "mental_health",   # casual/mental health path
         },
     )
 
+    # Mental health: always short-circuits to response
+    graph.add_edge("mental_health", "response")
+
     # STEP 3: Medical text pipeline
+    # symptom_extraction → followup_check → (ask user OR proceed to retrieval)
+    graph.add_edge("symptom_extraction", "followup_check")
+
     graph.add_conditional_edges(
-        "symptom_extraction",
-        _route_after_symptom_extraction,
+        "followup_check",
+        _route_after_followup,
         {
+            "response":          "response",
             "disease_retrieval": "disease_retrieval",
             "risk_evaluation":   "risk_evaluation",
         },
@@ -281,16 +312,19 @@ def build_triage_graph() -> StateGraph:
     # STEP 4: OCR → text pipeline
     graph.add_edge("ocr_scan", "symptom_extraction")
 
-    # STEP 5: X-ray pipeline
-    graph.add_edge("xray_analysis", "risk_evaluation")
+    # STEP 5: X-ray pipeline → vision bridge → full medical pipeline
+    graph.add_edge("xray_analysis",  "vision_bridge")
+    graph.add_edge("vision_bridge",  "disease_retrieval")
 
-    # STEP 6: Body image pipeline
+    # STEP 6: Body image pipeline → vision bridge → full medical pipeline
+    # If vision detects a document → redirect to OCR
+    # If vision detects body/skin → vision_bridge → disease_retrieval → full pipeline
     graph.add_conditional_edges(
         "medical_vision",
         _route_after_vision,
         {
-            "ocr_scan":        "ocr_scan",
-            "risk_evaluation": "risk_evaluation",
+        "ocr_scan":      "ocr_scan",
+        "vision_bridge": "vision_bridge",   # body_image now goes through bridge
         },
     )
 

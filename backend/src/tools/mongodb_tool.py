@@ -20,6 +20,7 @@ Design:
 
 import os
 import re
+import asyncio  # FIX #3
 from datetime import datetime, timezone
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -47,14 +48,19 @@ _db = None
 
 def _get_db():
     """Returns the MongoDB database instance.
-    
-    On first call, creates the AsyncIOMotorClient.  Because this function is
-    ONLY called during the lifespan startup (for ensure_indexes) before the
-    server starts serving traffic, and by individual async endpoint handlers
-    one at a time, there is no concurrency risk.
+
+    FIX #3 — Ensures a running event loop exists before Motor client creation.
+    Resolves 'no current event loop in thread' errors in threaded/sync contexts.
     """
     global _client, _db
     if _db is None:
+        # FIX #3: Ensure an event loop is running for Motor's async internals
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop in this thread — create and set one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
         uri = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
         _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
         _db = _client["triguard"]
@@ -138,6 +144,27 @@ async def load_session(session_id: str) -> dict | None:
     doc = await db.sessions.find_one({"_id": obj_id})
     if doc:
         doc["_id"] = str(doc["_id"])   # Serialize ObjectId for JSON compat
+    return doc
+
+
+async def load_user_session(session_id: str, user_id: str) -> dict | None:
+    """
+    Loads a session by ID only if it belongs to the requesting user.
+
+    Returns:
+        dict or None: The session document, or None if not found/unauthorized.
+    """
+    from bson import ObjectId
+    db = _get_db()
+
+    session_id_str = str(session_id)
+    if not _is_valid_object_id(session_id_str):
+        return None
+
+    obj_id = ObjectId(session_id_str)
+    doc = await db.sessions.find_one({"_id": obj_id, "user_id": str(user_id)})
+    if doc:
+        doc["_id"] = str(doc["_id"])
     return doc
 
 

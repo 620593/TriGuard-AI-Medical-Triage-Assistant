@@ -49,7 +49,7 @@ Version 6.0 introduces a massive structural leap, finalizing the architecture wi
 
 ## 🏗️ Architecture Overview
 
-The V5 architecture utilizes LangGraph for a robust, state-driven execution environment:
+The V6 architecture utilizes LangGraph for a robust, state-driven execution environment:
 
 ```mermaid
 graph TD
@@ -82,9 +82,9 @@ TriGuard-AI/
 │   │   ├── graph/     # LangGraph state machines and routing
 │   │   ├── tools/     # API connectors (Groq, Tavily, MongoDB)
 │   │   └── state/     # TypedDict state contracts
-│   └── tests/         # Comprehensive V5 test suite
+│   └── tests/         # Comprehensive V6 test suite
 ├── frontend/          # React 19 + Framer Motion + Tailwind 4
-└── README.md          # Version 5.0 Documentation
+└── README.md          # Version 6.0 Documentation
 ```
 
 ---
@@ -104,7 +104,7 @@ TriGuard-AI/
 
 ## 🚀 Getting Started
 
-Follow these steps to deploy TriGuard AI v5.0 locally.
+Follow these steps to deploy TriGuard AI v6.0 locally.
 
 **1. Install Core Dependencies**
 

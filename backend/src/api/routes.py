@@ -113,6 +113,19 @@ _AUDIO_SIGNATURES = [
     b"\x1aE\xdf\xa3",                 # WebM / MKV
 ]
 
+_LOW_INFO_TRANSCRIPTS = {
+    "you",
+    "you.",
+    "you?",
+    "you!",
+    "thank you",
+    "thanks",
+    "thanks.",
+    "okay",
+    "ok",
+    "hmm",
+}
+
 def _is_valid_audio_bytes(data: bytes) -> bool:
     """Returns True if data starts with a known audio file signature."""
     if len(data) < 12:
@@ -122,6 +135,27 @@ def _is_valid_audio_bytes(data: bytes) -> bool:
             return True
     # WebM 'webm' string appears at offset 8 in some encoders
     return b"webm" in data[:64] or b"OpusHead" in data[:64]
+
+
+def _normalize_transcription(text: str) -> str:
+    """Normalizes whitespace and strips control chars from STT output."""
+    cleaned = (text or "").replace("\n", " ").replace("\r", " ").strip()
+    return re.sub(r"\s+", " ", cleaned)
+
+
+def _is_low_quality_transcription(text: str) -> bool:
+    """Flags common Whisper hallucination outputs from silence/very noisy audio."""
+    normalized = _normalize_transcription(text)
+    if not normalized:
+        return True
+
+    lowered = normalized.lower()
+    if lowered in _LOW_INFO_TRANSCRIPTS:
+        return True
+
+    words = re.findall(r"[a-zA-Z0-9']+", lowered)
+    # Single-token transcripts are frequently false positives for near-silence.
+    return len(words) <= 1
 
 # ── Helper ──────────────────────────────────────────────────────────────────
 
@@ -425,13 +459,16 @@ async def voice_endpoint(
             except OSError:
                 pass
 
-        transcribed_text = transcription_result.get("text", "")
+        transcribed_text = _normalize_transcription(transcription_result.get("text", ""))
         detected_lang    = normalize_language_code(
             transcription_result.get("language") or language or "en"
         )
 
-        if not transcribed_text:
-            raise HTTPException(status_code=400, detail="Could not transcribe audio. Please try again.")
+        if _is_low_quality_transcription(transcribed_text):
+            raise HTTPException(
+                status_code=422,
+                detail="I could not clearly hear your voice. Please speak closer to the mic and try again.",
+            )
 
         state = _build_initial_state(
             transcribed_text, "voice", session_id or "", valid_uid, detected_lang,

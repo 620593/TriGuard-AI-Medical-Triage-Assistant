@@ -20,7 +20,6 @@ Design:
 
 import os
 import re
-import asyncio  # FIX #3
 from datetime import datetime, timezone
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -39,32 +38,44 @@ import logging
 _db_logger = logging.getLogger("triguard.mongodb")
 
 # ── Connection singleton ───────────────────────────────────────────────────────
-# Motor's AsyncIOMotorClient is not safe to construct from multiple coroutines
-# simultaneously.  We initialise it exactly once inside the FastAPI lifespan
-# (via ensure_indexes → _get_db) before any request can arrive.
+# Motor's AsyncIOMotorClient MUST be created within the FastAPI event loop
+# and NOT recreated in threads or different contexts.
+# Initialized ONCE in the FastAPI lifespan via initialize_mongodb().
 _client: AsyncIOMotorClient | None = None
 _db = None
+
+
+async def initialize_mongodb():
+    """
+    Async initializer called ONCE in the FastAPI lifespan.
+    Creates the Motor client bound to the FastAPI event loop.
+
+    Must be called before the first request arrives.
+    Should be called from the lifespan context manager.
+    """
+    global _client, _db
+    if _client is not None:
+        _db_logger.info("Motor client already initialized, skipping.")
+        return
+
+    uri = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+    _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
+    _db = _client["triguard"]
+    _db_logger.info(f"MongoDB client initialized with URI: mongodb://***")
 
 
 def _get_db():
     """Returns the MongoDB database instance.
 
-    FIX #3 — Ensures a running event loop exists before Motor client creation.
-    Resolves 'no current event loop in thread' errors in threaded/sync contexts.
+    IMPORTANT: Call initialize_mongodb() in the FastAPI lifespan FIRST.
+    This function will raise RuntimeError if Motor client was not initialized.
     """
-    global _client, _db
+    global _db
     if _db is None:
-        # FIX #3: Ensure an event loop is running for Motor's async internals
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            # No running loop in this thread — create and set one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        uri = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
-        _client = AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
-        _db = _client["triguard"]
-        _db_logger.info("MongoDB client initialised.")
+        raise RuntimeError(
+            "MongoDB client not initialized. "
+            "Call initialize_mongodb() in FastAPI lifespan before handling requests."
+        )
     return _db
 
 

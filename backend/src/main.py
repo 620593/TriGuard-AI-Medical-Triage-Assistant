@@ -67,7 +67,18 @@ async def lifespan(app: FastAPI):
 
     log_event(logger, "app_started", version="3.0.0", env=_ENV)
 
-    # 2. Ensure MongoDB indexes (non-fatal — warn but don't crash)
+    # 2. Initialize MongoDB client in the FastAPI event loop (CRITICAL FIX)
+    # Must be done FIRST to bind Motor client to this event loop, then all subsequent
+    # database operations will use the same client/loop.
+    from backend.src.tools.mongodb_tool import initialize_mongodb
+    try:
+        await initialize_mongodb()
+        logger.info("MongoDB client initialized.")
+    except Exception as exc:
+        logger.error(f"Failed to initialize MongoDB: {exc}")
+        raise
+
+    # 3. Ensure MongoDB indexes (non-fatal — warn but don't crash)
     from backend.src.tools.mongodb_tool import ensure_indexes
     try:
         await ensure_indexes()
@@ -75,7 +86,7 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning(f"Could not ensure MongoDB indexes: {exc}")
 
-    # 3. Build and attach triage graph to app state (fatal if it fails)
+    # 4. Build and attach triage graph to app state (fatal if it fails)
     from backend.src.graph.builder import build_triage_graph
     try:
         app.state.graph = build_triage_graph()

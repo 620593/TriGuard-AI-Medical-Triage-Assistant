@@ -1,21 +1,16 @@
 """
-load_history_node.py  (Version 5 — Async-Safe Event Loop Fix)
+load_history_node.py  (Version 6 — Pure Async Event Loop Safe)
 --------------------------------------------------------------
 Loads conversation history for in-session continuity.
 
-V5 Changes (over V4):
-    - ASYNC-SAFE: Replaced all `asyncio.get_event_loop()` calls that caused
-      "no current event loop in thread" errors when running inside thread pools.
-      Now uses `asyncio.run()` in isolated ThreadPoolExecutor threads, which
-      always creates its own event loop — safe from any calling context.
-    - history_service integration: Checks for history request intent and
-      short-circuits to history response if detected.
-    - Prior history context fetching is now properly async-isolated.
-    - All V4 behavior preserved (same-session load, symptom merge, etc.).
+V6 Changes (over V5):
+    - PURE ASYNC: Now fully async function runs directly in FastAPI event loop.
+      No ThreadPoolExecutor, no event loop switching, no Motor client conflicts.
+    - All database operations use the same event loop that Motor client is bound to.
+    - history_service integration: Checks for history request intent.
+    - Prior history context fetching is now truly async.
+    - All functional behavior from V5 preserved.
 """
-
-import asyncio
-import concurrent.futures
 
 from backend.src.tools.history_tool import load_history
 from backend.src.tools.mongodb_tool import load_session
@@ -25,24 +20,13 @@ from backend.src.logging.logger import get_logger, log_event
 logger = get_logger("load_history")
 
 
-def _run_async_safe(coro):
-    """
-    Runs an async coroutine from any context (sync or async, any thread).
-    Uses asyncio.run() in a fresh ThreadPoolExecutor thread — this ALWAYS
-    creates a clean event loop, avoiding 'no current event loop' errors.
-    """
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(asyncio.run, coro)
-        return future.result(timeout=8)
-
-
-def load_history_node(state: TriageState) -> TriageState:
+async def load_history_node(state: TriageState) -> TriageState:
     """
     Restores in-session memory from MongoDB (or history.json fallback).
 
     Priority:
         1. new_session → clean slate
-        2. same session_id → always load MongoDB session data (async-safe)
+        2. same session_id → always load MongoDB session data
         3. use_history opt-in → cross-session history.json merge
         4. default → pass-through
     """
@@ -60,16 +44,14 @@ def load_history_node(state: TriageState) -> TriageState:
         state["messages"]      = state["messages"][-1:]   # Keep only current input
         state["session_memory"] = ""
 
-        # Cross-session prior history (async-safe)
+        # Cross-session prior history (pure async)
         user_id = state.get("user_id", "")
         if user_id and user_id != "anonymous":
             from backend.src.tools.history_retrieval_tool import get_relevant_history
             symptoms = state.get("symptoms", [])
             intent   = state.get("intent", "casual")
             try:
-                prior_ctx = _run_async_safe(
-                    get_relevant_history(user_id, symptoms, intent)
-                )
+                prior_ctx = await get_relevant_history(user_id, symptoms, intent)
             except Exception as exc:
                 log_event(logger, "prior_history_failed",
                           user_id=user_id, error=str(exc))
@@ -89,12 +71,11 @@ def load_history_node(state: TriageState) -> TriageState:
         and session_id not in ("", "local")
     )
 
-    # ── Branch 3: Same-session → always load from MongoDB (async-safe) ───────
+    # ── Branch 3: Same-session → always load from MongoDB ───────────────────
     if is_same_session:
         try:
-            # V5 FIX: asyncio.run() in isolated thread — always has its own loop.
-            # This replaces the broken asyncio.get_event_loop() approach.
-            session_doc = _run_async_safe(load_session(session_id))
+            # V6 FIX: Pure async, no ThreadPoolExecutor. Uses FastAPI event loop.
+            session_doc = await load_session(session_id)
         except Exception as exc:
             log_event(logger, "session_load_failed",
                       session_id=session_id, error=str(exc))
@@ -125,14 +106,15 @@ def load_history_node(state: TriageState) -> TriageState:
                 state["last_structured_summary"] = saved_state["last_structured_summary"]
             if saved_state.get("disease_candidates"):
                 state["disease_candidates"] = saved_state["disease_candidates"]
-            # V5: Restore follow-up loop count from session
+            # V6: Restore follow-up loop count from session (CRITICAL for loop advancement)
             if saved_state.get("followup_count") is not None:
                 state["followup_count"] = saved_state["followup_count"]
 
             log_event(logger, "session_loaded",
                       session_id=session_id,
                       message_count=len(prior_messages),
-                      symptom_count=len(state["symptoms"]))
+                      symptom_count=len(state["symptoms"]),
+                      followup_count=state.get("followup_count", 0))
         else:
             log_event(logger, "session_not_found", session_id=session_id)
 

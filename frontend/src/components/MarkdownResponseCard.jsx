@@ -16,7 +16,14 @@
  *   🚨 When to See a Doctor  → Risk-colour bordered card
  */
 
-import { AlertTriangle, Clock, CheckCircle2, Pill, Leaf, HelpCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  Pill,
+  Leaf,
+  HelpCircle,
+} from "lucide-react";
 import CalmResultCard, { normalizeRiskLevel } from "./CalmResultCard";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -109,19 +116,32 @@ function SymptomsSection({ body }) {
 }
 
 function ConditionsSection({ body }) {
-  const lines = String(body || "").split("\n").filter(Boolean);
-  const summary = lines.filter((l) => !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*")).join(" ");
-  const conditions = lines.filter((l) => l.startsWith("•") || l.startsWith("-") || l.startsWith("*"));
+  const lines = String(body || "")
+    .split("\n")
+    .filter(Boolean);
+  const summary = lines
+    .filter(
+      (l) => !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*"),
+    )
+    .join(" ");
+  const conditions = lines.filter(
+    (l) => l.startsWith("•") || l.startsWith("-") || l.startsWith("*"),
+  );
 
   return (
     <div className="space-y-2">
       {summary && (
-        <p className="text-sm text-slate-600 leading-relaxed">{stripMd(summary)}</p>
+        <p className="text-sm text-slate-600 leading-relaxed">
+          {stripMd(summary)}
+        </p>
       )}
       {conditions.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
           {conditions.map((c, i) => {
-            const text = c.replace(/^[•\-\*]\s*/, "").replace(/\*(Possible but not confirmed)\*/i, "").trim();
+            const text = c
+              .replace(/^[•\-\*]\s*/, "")
+              .replace(/\*(Possible but not confirmed)\*/i, "")
+              .trim();
             return (
               <span
                 key={i}
@@ -129,7 +149,9 @@ function ConditionsSection({ body }) {
                            bg-purple-50 border border-purple-200 text-purple-700"
               >
                 <span>{stripMd(text)}</span>
-                <span className="text-purple-400 text-[10px] italic">~possible</span>
+                <span className="text-purple-400 text-[10px] italic">
+                  ~possible
+                </span>
               </span>
             );
           })}
@@ -146,11 +168,15 @@ function ActionsSection({ body }) {
     <ol className="space-y-2">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-3">
-          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-teal-50 border border-teal-200
-                           text-teal-600 text-[10px] font-bold flex items-center justify-center mt-0.5">
+          <span
+            className="flex-shrink-0 w-5 h-5 rounded-full bg-teal-50 border border-teal-200
+                           text-teal-600 text-[10px] font-bold flex items-center justify-center mt-0.5"
+          >
             {i + 1}
           </span>
-          <span className="text-sm text-slate-700 leading-relaxed">{stripMd(item)}</span>
+          <span className="text-sm text-slate-700 leading-relaxed">
+            {stripMd(item)}
+          </span>
         </li>
       ))}
     </ol>
@@ -162,25 +188,34 @@ function FollowupSection({ body }) {
     <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
       <div className="flex items-start gap-2">
         <HelpCircle size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
-        <p className="text-sm text-amber-800 leading-relaxed">{stripMd(body)}</p>
+        <p className="text-sm text-amber-800 leading-relaxed">
+          {stripMd(body)}
+        </p>
       </div>
     </div>
   );
 }
 
 function NutritionSection({ body }) {
-  const lines = String(body || "").split("\n").filter(Boolean);
+  const lines = String(body || "")
+    .split("\n")
+    .filter(Boolean);
   return (
     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2">
       {lines.map((line, i) => {
-        const stripped = line.replace(/^[•\-\*]\s*|^\*\*(.*?)\*\*:?\s*/g, "").trim();
+        const stripped = line
+          .replace(/^[•\-\*]\s*|^\*\*(.*?)\*\*:?\s*/g, "")
+          .trim();
         const isHeader = line.startsWith("**");
         const isHydration = line.startsWith("💧");
         const isLifestyle = line.startsWith("🏃");
         if (!stripped && !isHydration && !isLifestyle) return null;
         if (isHeader && !isHydration && !isLifestyle) {
           return (
-            <p key={i} className="text-xs font-semibold text-emerald-700 mt-1 uppercase tracking-wide">
+            <p
+              key={i}
+              className="text-xs font-semibold text-emerald-700 mt-1 uppercase tracking-wide"
+            >
               {line.replace(/\*\*/g, "").replace(/:/g, "")}
             </p>
           );
@@ -188,7 +223,9 @@ function NutritionSection({ body }) {
         return (
           <div key={i} className="flex items-start gap-2">
             <Leaf size={12} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-            <span className="text-sm text-slate-700 leading-relaxed">{stripMd(stripped || line)}</span>
+            <span className="text-sm text-slate-700 leading-relaxed">
+              {stripMd(stripped || line)}
+            </span>
           </div>
         );
       })}
@@ -203,7 +240,9 @@ function OtcSection({ body }) {
       {lines.map((line, i) => (
         <div key={i} className="flex items-start gap-2">
           <Pill size={13} className="text-orange-600 mt-0.5 flex-shrink-0" />
-          <span className="text-sm text-slate-700 leading-relaxed">{stripMd(line)}</span>
+          <span className="text-sm text-slate-700 leading-relaxed">
+            {stripMd(line)}
+          </span>
         </div>
       ))}
     </div>
@@ -216,28 +255,30 @@ function DoctorSection({ body, riskLevel }) {
     risk === "critical" || risk === "high"
       ? "border-red-200 bg-red-50"
       : risk === "moderate"
-      ? "border-amber-200 bg-amber-50"
-      : "border-slate-200 bg-slate-50";
+        ? "border-amber-200 bg-amber-50"
+        : "border-slate-200 bg-slate-50";
 
   const Icon =
     risk === "critical" || risk === "high"
       ? AlertTriangle
       : risk === "moderate"
-      ? Clock
-      : CheckCircle2;
+        ? Clock
+        : CheckCircle2;
 
   const iconColor =
     risk === "critical" || risk === "high"
       ? "text-red-500"
       : risk === "moderate"
-      ? "text-amber-500"
-      : "text-emerald-600";
+        ? "text-amber-500"
+        : "text-emerald-600";
 
   return (
     <div className={`rounded-xl border p-3 ${borderColor}`}>
       <div className="flex items-start gap-2">
         <Icon size={16} className={`${iconColor} mt-0.5 flex-shrink-0`} />
-        <p className="text-sm text-slate-700 leading-relaxed">{stripMd(body)}</p>
+        <p className="text-sm text-slate-700 leading-relaxed">
+          {stripMd(body)}
+        </p>
       </div>
     </div>
   );
@@ -245,17 +286,23 @@ function DoctorSection({ body, riskLevel }) {
 
 function GenericSection({ body }) {
   /** Handles XRay Review, What We See, and any unlabelled section. */
-  const lines = String(body || "").split("\n").filter(Boolean);
+  const lines = String(body || "")
+    .split("\n")
+    .filter(Boolean);
   return (
     <div className="space-y-1.5">
       {lines.map((line, i) => {
-        const isBullet = line.startsWith("•") || line.startsWith("-") || line.startsWith("*");
-        const isBold   = line.startsWith("**") && line.endsWith("**");
-        const cleaned  = stripMd(line);
+        const isBullet =
+          line.startsWith("•") || line.startsWith("-") || line.startsWith("*");
+        const isBold = line.startsWith("**") && line.endsWith("**");
+        const cleaned = stripMd(line);
         if (!cleaned) return null;
         if (isBold) {
           return (
-            <p key={i} className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-1">
+            <p
+              key={i}
+              className="text-xs font-semibold text-slate-500 uppercase tracking-wide mt-1"
+            >
               {cleaned}
             </p>
           );
@@ -265,7 +312,9 @@ function GenericSection({ body }) {
           return (
             <div key={i} className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 flex-shrink-0" />
-              <span className="text-sm text-slate-700 leading-relaxed">{text}</span>
+              <span className="text-sm text-slate-700 leading-relaxed">
+                {text}
+              </span>
             </div>
           );
         }
@@ -343,15 +392,75 @@ function getSectionLabel(heading) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
+/** 
+ * Safely parses unstructured Python dictionary strings 
+ * (e.g. {'symptoms': ['...', '...']}) into clean markdown text 
+ */
+function normalizePythonDictString(text) {
+  if (!text) return text;
+  
+  // Find { ... } blocks that look like Python dictionaries
+  return text.replace(/\{['"]\w+['"]\s*:[\s\S]*?\}/g, (match) => {
+    try {
+      let cleaned = match.trim();
+      if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+        const stringRegex = /('(?:\\'|[^'])*'|"(?:\\"|[^"])*")\s*(:?)/g;
+        let strings = [];
+        let m;
+        while ((m = stringRegex.exec(cleaned)) !== null) {
+          let strComplete = m[1];
+          let isKey = m[2] === ':';
+          
+          let str = strComplete.slice(1, -1);
+          str = str.replace(/\\'/g, "'")
+                   .replace(/\\"/g, '"')
+                   .replace(/\\n/g, '\n')
+                   .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+          
+          if (isKey) {
+            // Format the key as a bold subheader for GenericSection parsing
+            let heading = str.replace(/^###\s+/, '').replace(/^[^\w\s]+/u, '').trim();
+            // Capitalize first letter strictly
+            if (heading) heading = heading.charAt(0).toUpperCase() + heading.slice(1);
+            strings.push(``);
+            strings.push(`**${heading}**`);
+          } else {
+            if (str.trim().startsWith('### ')) {
+              // The string value itself was a markdown header
+              let heading = str.trim().replace(/^###\s+/, '').replace(/^[^\w\s]+/u, '').trim();
+              if (strings.length > 0 && strings[strings.length - 1].startsWith('**')) {
+                strings.pop(); // Avoid duplicate headers
+              }
+              strings.push(``);
+              strings.push(`**${heading}**`);
+            } else if (str.trim()) {
+              strings.push(str.trim());
+            }
+          }
+        }
+        if (strings.length > 0) {
+          return strings.join('\n');
+        }
+      }
+      return match;
+    } catch(e) {
+      return match;
+    }
+  });
+}
+
 export default function MarkdownResponseCard({ text, riskLevel }) {
   if (!text) return null;
 
-  const { intro, sections, footer } = parseDocument(text);
+  const normalizedText = normalizePythonDictString(text);
+  const { intro, sections, footer } = parseDocument(normalizedText);
 
   if (!sections.length && !intro) {
     return (
       <CalmResultCard riskLevel={riskLevel}>
-        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{text}</p>
+        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+          {normalizedText}
+        </p>
       </CalmResultCard>
     );
   }
@@ -369,13 +478,24 @@ export default function MarkdownResponseCard({ text, riskLevel }) {
 
           // Choose renderer by emoji
           let content;
-          if (emoji === "🧾" || label.includes("symptom")) content = <SymptomsSection body={body} />;
-          else if (emoji === "🩺" || label.includes("condition")) content = <ConditionsSection body={body} />;
-          else if (emoji === "❓" || label.includes("follow-up") || label.includes("quick question")) content = <FollowupSection body={body} />;
-          else if (emoji === "🧘" || label.includes("action")) content = <ActionsSection body={body} />;
-          else if (emoji === "🥗" || label.includes("nutrition")) content = <NutritionSection body={body} />;
-          else if (emoji === "💊" || label.includes("otc")) content = <OtcSection body={body} />;
-          else if (emoji === "🚨" || label.includes("doctor")) content = <DoctorSection body={body} riskLevel={riskLevel} />;
+          if (emoji === "🧾" || label.includes("symptom"))
+            content = <SymptomsSection body={body} />;
+          else if (emoji === "🩺" || label.includes("condition"))
+            content = <ConditionsSection body={body} />;
+          else if (
+            emoji === "❓" ||
+            label.includes("follow-up") ||
+            label.includes("quick question")
+          )
+            content = <FollowupSection body={body} />;
+          else if (emoji === "🧘" || label.includes("action"))
+            content = <ActionsSection body={body} />;
+          else if (emoji === "🥗" || label.includes("nutrition"))
+            content = <NutritionSection body={body} />;
+          else if (emoji === "💊" || label.includes("otc"))
+            content = <OtcSection body={body} />;
+          else if (emoji === "🚨" || label.includes("doctor"))
+            content = <DoctorSection body={body} riskLevel={riskLevel} />;
           else {
             // Generic section (history, xray review, body image, etc.) — rich text
             content = <GenericSection body={body} />;
@@ -388,7 +508,9 @@ export default function MarkdownResponseCard({ text, riskLevel }) {
                          hover:border-slate-200 transition-colors duration-150"
             >
               {heading && (
-                <div className={`flex items-center gap-1.5 mb-2 ${accentColor}`}>
+                <div
+                  className={`flex items-center gap-1.5 mb-2 ${accentColor}`}
+                >
                   <span className="text-sm">{emoji}</span>
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     {heading.replace(/^[\p{Emoji}\s]+/u, "").trim()}

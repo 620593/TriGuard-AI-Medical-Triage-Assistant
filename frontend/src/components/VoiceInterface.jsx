@@ -22,6 +22,12 @@ const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 const VOICE_URL = `${API_BASE}/api/v3/voice`;
 const MAX_DURATION = 30_000; // 30-second auto-stop
 
+const getPreferredAudioMimeType = () => {
+  if (typeof MediaRecorder === "undefined") return "";
+  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+  return candidates.find((mime) => MediaRecorder.isTypeSupported(mime)) || "";
+};
+
 // ── Helper: format mm:ss ─────────────────────────────────────────────────────
 const fmtTime = (ms) => {
   const s = Math.floor(ms / 1000);
@@ -89,6 +95,7 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
   const [audioFinished, setAudioFinished] = useState(false);
 
   const mediaRecorderRef = useRef(null);
+  const recorderMimeTypeRef = useRef("audio/webm");
   const audioChunksRef = useRef([]);
   const audioRef = useRef(null); // <Audio> object for playback
   const timerRef = useRef(null); // setInterval for elapsed counter
@@ -114,8 +121,29 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
     setElapsed(0);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      if (typeof MediaRecorder === "undefined") {
+        throw new Error("Voice recording is not supported in this browser.");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      const preferredMimeType = getPreferredAudioMimeType();
+      const recorder = preferredMimeType
+        ? new MediaRecorder(stream, {
+            mimeType: preferredMimeType,
+            audioBitsPerSecond: 128000,
+          })
+        : new MediaRecorder(stream);
+
+      recorderMimeTypeRef.current =
+        recorder.mimeType || preferredMimeType || "audio/webm";
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
@@ -164,8 +192,16 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
   // ── Send audio to backend ────────────────────────────────────────────────
   const sendAudio = useCallback(async () => {
     setVoiceState("processing");
-    const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-    const file = new File([blob], "recording.webm", { type: "audio/webm" });
+    if (!audioChunksRef.current.length) {
+      setErrorMsg("No voice detected. Please speak clearly and try again.");
+      setVoiceState("error");
+      return;
+    }
+
+    const mimeType = recorderMimeTypeRef.current || "audio/webm";
+    const ext = mimeType.includes("mp4") ? "m4a" : "webm";
+    const blob = new Blob(audioChunksRef.current, { type: mimeType });
+    const file = new File([blob], `recording.${ext}`, { type: mimeType });
 
     const formData = new FormData();
     formData.append("audio", file);
@@ -187,14 +223,23 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
       }
       const data = await res.json();
 
-      setTranscript(data.transcription || "");
-      setResponseText(data.response || "");
+      const safeTranscript = (data.transcription || "").trim();
+      const safeResponse = (data.response || "").trim();
+
+      if (!safeTranscript) {
+        throw new Error(
+          "I could not clearly hear your voice. Please try again.",
+        );
+      }
+
+      setTranscript(safeTranscript);
+      setResponseText(safeResponse);
       setRiskLevel(data.risk_level || null);
 
       // Notify parent to add to chat history
       onResult?.({
-        transcription: data.transcription,
-        response: data.response,
+        transcription: safeTranscript,
+        response: safeResponse,
         risk_level: data.risk_level,
         audio_url: data.audio_url || null,
         session_id: data.session_id,
@@ -204,10 +249,10 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
 
       // ── Audio playback ────────────────────────────────────────────────
       if (data.audio_url) {
-        playAudio(data.audio_url);
-      } else if (data.response) {
+        playAudio(data.audio_url, safeResponse);
+      } else if (safeResponse) {
         // Fallback: browser speechSynthesis
-        speakFallback(data.response);
+        speakFallback(safeResponse);
       } else {
         setAudioFinished(true);
       }
@@ -219,15 +264,15 @@ const VoiceInterface = ({ onClose, onResult, sessionId, userId, token }) => {
   }, [sessionId, userId, token, onResult]);
 
   // ── Play returned .mp3 ───────────────────────────────────────────────────
-  const playAudio = (url) => {
+  const playAudio = (url, fallbackText = "") => {
     const audio = new Audio(url);
     audioRef.current = audio;
     audio.onended = () => setAudioFinished(true);
     audio.onerror = () => {
       // If audio fetch fails, fall back to browser TTS
-      speakFallback(responseText);
+      speakFallback(fallbackText);
     };
-    audio.play().catch(() => speakFallback(responseText));
+    audio.play().catch(() => speakFallback(fallbackText));
   };
 
   // ── Browser speechSynthesis fallback ────────────────────────────────────

@@ -210,7 +210,11 @@ def vision_symptom_bridge_node(state: TriageState) -> TriageState:
     else:  # body_image
         vision = state.get("vision_findings", {}) or {}
         symptoms = _extract_skin_symptoms(vision)
-        explanation = vision.get("explanation", "")
+        # Safe type handling: explanation may be a dict if LLM returns nested object
+        _raw_explanation = vision.get("explanation", "")
+        if isinstance(_raw_explanation, dict):
+            _raw_explanation = _raw_explanation.get("content", "") or ""
+        explanation = str(_raw_explanation) if _raw_explanation else ""
         conditions  = ", ".join(vision.get("possible_conditions", [])[:4])
         context = (
             f"Patient submitted a body/skin image for analysis. "

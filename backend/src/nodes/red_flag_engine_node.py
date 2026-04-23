@@ -130,6 +130,23 @@ def red_flag_engine_node(state: TriageState) -> TriageState:
         log_event(logger, "red_flag_skipped", reason="empty_search_text")
         return state
 
+    def _llm_detect_emergency(text: str) -> bool:
+        try:
+            prompt = f"""
+You are a medical triage assistant.
+Determine if the following message indicates a life-threatening emergency.
+
+Message: "{text}"
+
+Respond ONLY with:
+YES or NO
+"""
+            response = llm.invoke(prompt)
+            return response.strip().lower() == "yes"
+        except Exception as e:
+            logger.warning("LLM detection failed: %s", e)
+            return False
+
     # FIX #6 — Escalation override: critical symptom clusters force risk=high, urgency=urgent
     _CRITICAL_OVERRIDES = [
         ("chest pain",           "high", "urgent"),
@@ -149,6 +166,13 @@ def red_flag_engine_node(state: TriageState) -> TriageState:
             log_event(logger, "red_flag_critical_override",
                       keyword=keyword, forced_risk=forced_risk, forced_urgency=forced_urgency)
             return state
+
+    if _llm_detect_emergency(search_text):
+        state["risk_level"] = "high"
+        state["urgency"] = "emergency"
+        state["red_flag_triggered"] = True
+        log_event(logger, "red_flag_llm_triggered")
+        return state
 
     current_risk   = state.get("risk_level", "low").lower()
     triggered      = False

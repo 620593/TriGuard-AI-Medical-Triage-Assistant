@@ -89,13 +89,13 @@ async def save_session_node(state: TriageState) -> TriageState:
 
     # Fire session update as background task (truly non-blocking)
     try:
-        asyncio.create_task(update_session(session_id, updates))
-        log_event(logger, "session_update_scheduled",
+        await update_session(session_id, updates)
+        log_event(logger, "session_update_saved",
                   session_id=session_id,
                   message_count=len(updates["messages"]),
                   symptom_count=len(updates["symptoms"]))
     except Exception as e:
-        logger.error(f"Failed to schedule session update: {e}")
+        logger.error(f"Failed to save session update: {e}")
 
     # Save summary report in background (only for completed triage — not mid-followup)
     next_action = state.get("next_action", "")

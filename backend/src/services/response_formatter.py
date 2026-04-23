@@ -335,12 +335,20 @@ def build_history_response(user_reports: list) -> str:
 
         risk    = report.get("risk_level", "unknown").upper()
         symptoms = ", ".join(report.get("symptoms", [])) or "Not recorded"
-        summary  = _simplify(report.get("clinical_summary", report.get("summary", "No summary available.")))
+        _raw_summary = report.get("clinical_summary", report.get("summary", "No summary available."))
+        # Safe type handling: extract text from dict responses before slicing
+        if isinstance(_raw_summary, dict):
+            _raw_summary = _raw_summary.get("content", "") or ""
+        _raw_summary = str(_raw_summary) if _raw_summary else "No summary available."
+        summary  = _simplify(_raw_summary)
 
         lines.append(f"**Consultation {i} — {date}**")
         lines.append(f"• Risk Level: {risk}")
         lines.append(f"• Symptoms: {symptoms}")
-        lines.append(f"• Summary: {summary[:300]}")
+        if isinstance(summary, str):
+            lines.append(f"• Summary: {summary[:300]}")
+        else:
+            lines.append(f"• Summary: {str(summary)[:300]}")
         lines.append("")
 
     lines.append("*TriGuard stores your history to give you better, more personalised health guidance.*")

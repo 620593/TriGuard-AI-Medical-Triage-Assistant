@@ -67,6 +67,29 @@ const TriageChat = () => {
 
   /** Called when VoiceInterface returns a result — merge into chat history */
   const handleVoiceResult = (result) => {
+    const cleanTranscription = (result?.transcription || "").trim();
+    const cleanResponse = (result?.response || "").trim();
+
+    if (!cleanTranscription) {
+      setMessages((prev) =>
+        [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content:
+              "I could not clearly hear your voice. Please speak closer to the microphone and try again.",
+            html: sanitize(
+              "I could not clearly hear your voice. Please speak closer to the microphone and try again.",
+            ),
+            type: "text",
+            error: true,
+          },
+        ].slice(-50),
+      );
+      return;
+    }
+
     if (result.session_id) setSessionID(result.session_id);
     setMessages((prev) =>
       [
@@ -74,15 +97,15 @@ const TriageChat = () => {
         {
           id: crypto.randomUUID(),
           role: "user",
-          content: `🎙️ ${result.transcription}`,
-          html: sanitize(`🎙️ ${result.transcription}`),
+          content: `🎙️ ${cleanTranscription}`,
+          html: sanitize(`🎙️ ${cleanTranscription}`),
           type: "voice_input",
         },
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: result.response,
-          html: sanitize(result.response),
+          content: cleanResponse,
+          html: sanitize(cleanResponse),
           risk: result.risk_level,
           type: "voice",
           // data.audio_url is already the full URL from backend — use directly
@@ -333,7 +356,8 @@ const TriageChat = () => {
       if (data.session_id) setSessionID(data.session_id);
 
       // Use the formatted response (with ### sections) if available, else fallback to summary
-      const content = data.response || data.summary || data.analysis || "Analysis complete.";
+      const content =
+        data.response || data.summary || data.analysis || "Analysis complete.";
 
       setMessages((prev) =>
         [
@@ -344,9 +368,9 @@ const TriageChat = () => {
             content: content,
             html: sanitize(content),
             risk: data.risk_level,
-            // Always use "text" type so MarkdownResponseCard can render the ### sections
-            // XrayResultCard is still available but bypassed for the new formatted format
-            type: "text",
+            // Use a dedicated analysis type so uploaded file outputs always go
+            // through the same rich card renderer, even if markdown headings are absent.
+            type: "analysis",
             imageUrl: triageAPI.getStaticNutritionUrl(
               data.nutrition_image || data.image_url,
             ),
@@ -598,9 +622,14 @@ const TriageChat = () => {
                       />
                     ) : msg.role === "assistant" && msg.type === "xray" ? (
                       <XrayResultCard text={msg.content} riskLevel={msg.risk} />
-                    ) : msg.role === "assistant" && msg.content && msg.content.includes("###") ? (
+                    ) : msg.role === "assistant" &&
+                      (msg.type === "analysis" ||
+                        (msg.content && msg.content.includes("###"))) ? (
                       // New 7-section format — use rich card renderer
-                      <MarkdownResponseCard text={msg.content} riskLevel={msg.risk} />
+                      <MarkdownResponseCard
+                        text={msg.content}
+                        riskLevel={msg.risk}
+                      />
                     ) : (
                       <p
                         className="whitespace-pre-wrap text-sm leading-relaxed"

@@ -80,66 +80,57 @@ def _normalize_image_to_data_url(image_input: Any) -> str:
 
 def _build_body_prompt() -> str:
     """
-    V6 UPGRADE: Modality-aware, region-restricted, user-friendly prompt.
-    - Restricts analysis ONLY to the visible region in the image.
-    - Explanation uses plain English (no medical jargon).
-    - Explicitly forbids mentioning unrelated body regions.
+    Structured markdown-output prompt for body/skin image analysis.
+    Produces ### headed sections identical to the X-ray output format so the
+    frontend MarkdownResponseCard renders body-image results as a card.
     """
     return (
-        "You are a careful medical image analysis assistant. "
-        "Analyze the provided medical image step by step.\n\n"
+        "Analyze the medical image and return a structured response in EXACTLY the following format.\n\n"
 
-        "STEP 1 — Identify the image type: 'skin', 'xray', 'document', or 'unknown'.\n"
-        "STEP 2 — Identify the EXACT body region visible in the image.\n"
-        "STEP 3 — Analyze ONLY what is visible in that specific region. "
-        "NEVER mention organs or body parts NOT visible in the image.\n\n"
+        "DO NOT return plain paragraphs.\n"
+        "DO NOT skip sections.\n"
+        "USE markdown headings exactly as shown.\n\n"
 
-        "FOR SKIN IMAGES (analyze only the skin area shown):\n"
-        "  - Describe any spots, rashes, bumps, patches in plain English.\n"
-        "  - Color: red, dark, light, mixed, patchy.\n"
-        "  - Distribution: which body part, how widespread.\n"
-        "  - Size: small (coin-size) or larger.\n"
-        "  - Surface: dry, moist, rough, smooth.\n"
-        "  - Severity: mild / moderate / severe.\n"
-        "  - 3-5 possible skin conditions (use: 'this may suggest...').\n\n"
+        "Output format:\n\n"
 
-        "FOR X-RAY IMAGES (analyze only the specific region in frame):\n"
-        "  - Name the EXACT visible area (e.g., left knee joint, wrist bones, chest cavity).\n"
-        "  - If it is a LEG/KNEE/FOOT/ANKLE xray: discuss ONLY bones and joints of that limb.\n"
-        "  - If it is a CHEST xray: discuss ONLY lungs, ribs, heart shadow — nothing else.\n"
-        "  - If it is a HAND/ARM/SHOULDER xray: discuss ONLY that arm region.\n"
-        "  - NEVER mention or comment on regions outside the visible frame.\n\n"
+        "### 🧾 Symptoms Identified\n"
+        "- List observed visible symptoms (bullet points)\n\n"
 
-        "CRITICAL RULES (all image types):\n"
-        "- Use uncertainty language: 'may suggest', 'could indicate', 'appears to show'.\n"
-        "- NEVER confirm a diagnosis. NEVER use 'you have'.\n"
-        "- NEVER invent findings not visible in the image.\n"
-        "- NEVER mention body parts or organs outside the detected region.\n"
-        "- Explanation field MUST use plain, everyday English. "
-        "Replace: lesion→spot/patch, erythema→redness, pruritus→itching, "
-        "opacity→cloudiness, consolidation→thickening, fracture→break/crack.\n"
-        "- Tone: warm and calm like a caring friend, not a clinical report.\n\n"
+        "### 🩺 Possible Conditions\n"
+        "- List possible conditions based on the image\n"
+        "- Keep explanations short and clear\n\n"
 
-        "FOR DOCUMENTS: populate document_type, org_name, is_handwritten, "
-        "medications_listed, patient_details_visible.\n\n"
+        "### 🧘 Recommended Actions\n"
+        "1. Action 1\n"
+        "2. Action 2\n\n"
 
-        "Return ONLY valid JSON (no markdown, no code fences):\n"
+        "### 🚨 When to See a Doctor\n"
+        "- Clear guidance on urgency\n\n"
+
+        "Rules:\n"
+        "- Always include ALL sections\n"
+        "- Keep it concise\n"
+        "- Do NOT add extra headings\n"
+        "- Do NOT write outside this format\n"
+        "- Do NOT return unstructured text\n\n"
+
+        "Return ONLY valid JSON (no markdown code fences):\n"
         "{\n"
         '  "image_type": "skin | xray | document | unknown",\n'
-        '  "body_region": "exact region visible, e.g. left knee, chest, lower back skin",\n'
-        '  "document_type": "null or prescription | lab_report | discharge_summary | etc",\n'
-        '  "org_name": "null or clinic name",\n'
-        '  "is_handwritten": null or true or false,\n'
-        '  "medications_listed": null or true or false,\n'
-        '  "patient_details_visible": null or true or false,\n'
-        '  "visual_findings": ["plain-English finding 1", "finding 2"],\n'
-        '  "lesion_morphology": "null or plain-language lesion description",\n'
-        '  "color_description": "null or color description",\n'
-        '  "distribution": "null or body area and pattern",\n'
-        '  "severity": "null | mild | moderate | severe",\n'
-        '  "possible_conditions": ["condition 1", "condition 2", "condition 3"],\n'
-        '  "confidence": 0.0 to 1.0,\n'
-        '  "explanation": "3-5 sentence plain-English summary for a non-medical person. ONLY discuss the visible region. No jargon."\n'
+        '  "body_region": "exact region visible",\n'
+        '  "document_type": null,\n'
+        '  "org_name": null,\n'
+        '  "is_handwritten": null,\n'
+        '  "medications_listed": null,\n'
+        '  "patient_details_visible": null,\n'
+        '  "visual_findings": ["finding 1", "finding 2"],\n'
+        '  "lesion_morphology": null,\n'
+        '  "color_description": null,\n'
+        '  "distribution": null,\n'
+        '  "severity": "mild | moderate | severe",\n'
+        '  "possible_conditions": ["condition 1", "condition 2"],\n'
+        '  "confidence": 0.0,\n'
+        '  "explanation": "### 🧾 Symptoms Identified\\n- symptom 1\\n- symptom 2\\n\\n### 🩺 Possible Conditions\\n- condition 1\\n- condition 2\\n\\n### 🧘 Recommended Actions\\n1. action 1\\n2. action 2\\n\\n### 🚨 When to See a Doctor\\n- guidance"\n'
         "}"
     )
 

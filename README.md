@@ -25,11 +25,11 @@ Version 6.0 introduces a massive structural leap, finalizing the architecture wi
 
 | Feature                             | Description                                                                                                                                                                                           | Impact                                   |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| �️ **Authentication 2.0**            | Secure login system featuring **Google OAuth** integration, JWT-based protected routes, and Axios 401 interceptors.                                                                                   | Seamless & secure onboarding.            |
+| 🔐 **Authentication 2.0**            | Secure login system featuring **Google OAuth** integration, JWT-based protected routes, and Axios 401 interceptors.                                                                                   | Seamless & secure onboarding.            |
 | 🧠 **In-Session Memory**            | True conversational flow! The AI remembers previous turns inside the same session so you don't have to repeat your symptoms repeatedly. Uses MongoDB session ID mapping.                              | Fluid conversational triage.             |
 | 💊 **OTC & Nutrition Integrations** | Now safely suggests over-the-counter medications and dietary nutrition tips when triggered by the triage logic and verified safely.                                                                   | Actionable holistic advice.              |
 | 🎨 **UI Redesign**                  | Breathtaking Frontend redesign utilizing React 19, Tailwind CSS 4, and Framer Motion micro-interactions. Offers split-screen glassmorphic layouts.                                                    | Premium visual experience.               |
-| � **Deep Document Pipeline**        | A robust `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into our clinical text engine. | High precision medical record ingestion. |
+| 📄 **Deep Document Pipeline**        | A robust `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into our clinical text engine. | High precision medical record ingestion. |
 | 🌍 **Native Multilingual**          | Triage instructions are embedded directly in the LLM prompt, simplifying complex jargon locally for diverse users.                                                                                    | Inclusive, fast responses globally.      |
 
 ---
@@ -49,7 +49,7 @@ Version 6.0 introduces a massive structural leap, finalizing the architecture wi
 
 ## 🏗️ Architecture Overview
 
-The V5 architecture utilizes LangGraph for a robust, state-driven execution environment:
+The V6 architecture utilizes LangGraph for a robust, state-driven execution environment:
 
 ```mermaid
 graph TD
@@ -82,9 +82,9 @@ TriGuard-AI/
 │   │   ├── graph/     # LangGraph state machines and routing
 │   │   ├── tools/     # API connectors (Groq, Tavily, MongoDB)
 │   │   └── state/     # TypedDict state contracts
-│   └── tests/         # Comprehensive V5 test suite
+│   └── tests/         # Comprehensive V6 test suite
 ├── frontend/          # React 19 + Framer Motion + Tailwind 4
-└── README.md          # Version 5.0 Documentation
+└── README.md          # Version 6.0 Documentation
 ```
 
 ---
@@ -104,7 +104,7 @@ TriGuard-AI/
 
 ## 🚀 Getting Started
 
-Follow these steps to deploy TriGuard AI v5.0 locally.
+Follow these steps to deploy TriGuard AI v6.0 locally.
 
 **1. Install Core Dependencies**
 
@@ -132,7 +132,13 @@ Create a `.env` file in the `backend/` directory with your API keys:
 ```env
 GROQ_API_KEY="your_groq_api_key_here"
 TAVILY_API_KEY="your_tavily_api_key_here"
-MONGO_URI="mongodb://localhost:27017"
+GEMINI_API_KEY="your_gemini_api_key_here"
+MONGODB_URI="mongodb://localhost:27017"
+JWT_SECRET_KEY="your_jwt_secret_key_here"
+GOOGLE_CLIENT_ID="your_google_client_id_here"
+GOOGLE_CLIENT_SECRET="your_google_client_secret_here"
+TRIGUARD_ALLOWED_ORIGINS="http://localhost:5173,http://localhost:3000"
+TRIGUARD_ENV="development"
 ```
 
 ---

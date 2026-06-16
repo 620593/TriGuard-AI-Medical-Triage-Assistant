@@ -117,6 +117,7 @@ pip install uv
 ```bash
 cd backend
 uv sync
+uv run uvicorn src.main:app --reload --port 8000
 ```
 
 **3. Setup Frontend Client**
@@ -124,6 +125,7 @@ uv sync
 ```bash
 cd frontend
 npm install
+npm run dev
 ```
 
 **4. Environment Variables (`backend/.env`)**
@@ -153,5 +155,5 @@ TWILIO_FROM_NUMBER="your_twilio_from_number_here"
 ---
 
 <div align="center">
-&copy; 2026 TriGuard AI Team | <a href="https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant">Visit Repository</a>
+&copy; 2025 TriGuard AI Team | <a href="https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant">Visit Repository</a>
 </div>

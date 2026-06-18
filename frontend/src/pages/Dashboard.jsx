@@ -28,16 +28,16 @@ const Dashboard = () => {
     <div className="p-8 max-w-7xl mx-auto">
       <header className="mb-10 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold mb-2 text-white drop-shadow-md">
+          <h1 className="text-3xl font-bold mb-2 text-[var(--accent-primary)]">
             Health Dashboard
           </h1>
-          <p className="text-slate-400 font-light">
+          <p className="text-[var(--text-secondary)] font-light">
             Your recent metrics and triage history.
           </p>
         </div>
         <div className="text-right">
           <RiskBadge level={latestRisk} />
-          <p className="text-[10px] text-slate-400 mt-1 uppercase">
+          <p className="text-[10px] text-[var(--text-secondary)] mt-1 uppercase">
             LAST ASSESSMENT: {lastAssessment}
           </p>
         </div>
@@ -53,7 +53,7 @@ const Dashboard = () => {
           change="+2%"
         />
         <StatCard
-          icon={<Thermometer className="text-orange-500" />}
+          icon={<Thermometer className="text-[var(--accent-primary)]" />}
           label="Body Temp"
           value="36.6"
           unit="°C"
@@ -78,8 +78,8 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Chart Placeholder */}
         <div className="lg:col-span-2 skeuo-panel h-[400px] flex items-center justify-center relative overflow-hidden p-6">
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-medical-primary/5 to-transparent" />
-          <p className="text-slate-400 flex items-center gap-2">
+          <div className="absolute inset-x-0 bottom-0 h-1/2 /5" />
+          <p className="text-[var(--text-secondary)] flex items-center gap-2">
             <TrendingUp size={20} />
             Risk Trend Visualization coming soon
           </p>
@@ -87,13 +87,13 @@ const Dashboard = () => {
 
         {/* Sidebar Alerts */}
         <div className="space-y-6">
-          <div className="bg-red-500/10 backdrop-blur-md border border-red-500/30 rounded-2xl p-6 shadow-[0_0_25px_rgba(239,68,68,0.15)] relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-3xl rounded-full" />
-            <div className="flex items-start gap-4 text-red-100 z-10 relative">
-              <AlertCircle className="shrink-0 mt-1 text-red-400" />
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-red-100 blur-2xl rounded-full" />
+            <div className="flex items-start gap-4 text-red-700 z-10 relative">
+              <AlertCircle className="shrink-0 mt-1 text-red-600" />
               <div>
-                <h4 className="font-bold text-red-300">Medical Alert</h4>
-                <p className="text-xs text-red-100/80 mt-1">
+                <h4 className="font-bold text-red-800">Medical Alert</h4>
+                <p className="text-xs text-red-600 mt-1">
                   Based on your last symptoms, we recommend monitoring your
                   blood pressure closely.
                 </p>
@@ -102,10 +102,10 @@ const Dashboard = () => {
           </div>
 
           <div className="skeuo-panel p-6">
-            <h4 className="font-bold mb-4">Recent Triage Reports</h4>
+            <h4 className="font-bold text-[var(--text-primary)] mb-4">Recent Triage Reports</h4>
             <div className="space-y-4">
               {isLoading ? (
-                <div className="flex items-center gap-2 text-slate-400 py-4">
+                <div className="flex items-center gap-2 text-[var(--text-secondary)] py-4">
                   <Loader2 className="animate-spin" size={16} />
                   <span>Loading history...</span>
                 </div>
@@ -128,7 +128,7 @@ const Dashboard = () => {
                     />
                   ))
               ) : (
-                <p className="text-sm text-slate-400">No reports found.</p>
+                <p className="text-sm text-[var(--text-secondary)]">No reports found.</p>
               )}
             </div>
           </div>
@@ -144,15 +144,15 @@ const StatCard = ({ icon, label, value, unit, change }) => (
     className="skeuo-panel p-6 group"
   >
     <div className="flex justify-between items-start mb-4">
-      <div className="p-2 bg-white/10 rounded-xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.1)] border border-white/10 group-hover:bg-white/20 transition-all">
+      <div className="p-2 bg-[var(--accent-light)] rounded-xl border border-[var(--panel-border)] group-hover:bg-[var(--accent-light)] transition-all">
         {icon}
       </div>
       {change && (
         <span
           className={`text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md ${
             change.startsWith("+")
-              ? "bg-green-500/20 text-green-300 border border-green-500/30"
-              : "bg-white/10 text-slate-300 border border-white/20"
+              ? "bg-green-100 text-green-700 border border-green-200"
+              : "bg-[var(--accent-light)] text-[var(--text-secondary)] border border-[var(--panel-border)]"
           }`}
         >
           {change}
@@ -160,12 +160,12 @@ const StatCard = ({ icon, label, value, unit, change }) => (
       )}
     </div>
     <div className="space-y-1">
-      <p className="text-slate-400 text-sm font-medium">{label}</p>
+      <p className="text-[var(--text-secondary)] text-sm font-medium">{label}</p>
       <div className="flex items-baseline gap-1">
-        <span className="text-3xl font-bold text-white drop-shadow-lg">
+        <span className="text-3xl font-bold text-[var(--text-primary)]">
           {value}
         </span>
-        <span className="text-slate-500 text-xs font-bold uppercase">
+        <span className="text-[var(--text-secondary)] text-xs font-bold uppercase">
           {unit}
         </span>
       </div>
@@ -174,18 +174,18 @@ const StatCard = ({ icon, label, value, unit, change }) => (
 );
 
 const TestItem = ({ name, date, status, urgent }) => (
-  <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors cursor-pointer">
+  <div className="flex items-center justify-between py-2 border-b border-[var(--panel-border)] last:border-0 hover:bg-[var(--bg-primary)] px-2 rounded-lg transition-colors cursor-pointer">
     <div>
-      <p className="text-sm font-bold text-white">{name}</p>
-      <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+      <p className="text-sm font-bold text-[var(--text-primary)]">{name}</p>
+      <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">
         {date}
       </p>
     </div>
     <span
       className={`text-[10px] px-2 py-1 rounded-md border ${
         urgent
-          ? "bg-red-500/20 text-red-300 border-red-500/30 font-bold"
-          : "bg-white/5 text-slate-300 border-white/10"
+          ? "bg-red-50 text-red-600 border-red-200 font-bold"
+          : "bg-[var(--accent-light)] text-[var(--text-secondary)] border-[var(--panel-border)]"
       }`}
     >
       {status}

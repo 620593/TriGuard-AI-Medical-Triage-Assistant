@@ -41,7 +41,7 @@ function DietarySection({ content, imageUrl }) {
 
   return (
     <div className="rounded-xl border border-sky-100 bg-sky-50/40 p-3">
-      <p className="text-sm font-medium text-slate-800 mb-2">Food support</p>
+      <p className="text-sm font-medium text-[var(--text-primary)] mb-2">Food support</p>
 
       {imageUrl ? (
         <div className="relative rounded-lg overflow-hidden border border-sky-100 aspect-video bg-slate-100 mb-3">
@@ -94,7 +94,7 @@ export default function TriageResponseCard({
     <CalmResultCard riskLevel={riskLevel || parsed.risk_level}>
       {summary ? (
         <div>
-          <p className="text-sm font-medium text-slate-800 mb-1">Summary</p>
+          <p className="text-sm font-medium text-[var(--text-primary)] mb-1">Summary</p>
           <p className="text-base leading-relaxed text-slate-700">
             <InlineMarkdown text={summary} />
           </p>
@@ -103,7 +103,7 @@ export default function TriageResponseCard({
 
       {action ? (
         <div>
-          <p className="text-sm font-medium text-slate-800 mb-1">Next step</p>
+          <p className="text-sm font-medium text-[var(--text-primary)] mb-1">Next step</p>
           <p className="text-base leading-relaxed text-slate-700">
             <InlineMarkdown text={action} />
           </p>
@@ -111,8 +111,8 @@ export default function TriageResponseCard({
       ) : null}
 
       {redFlags ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-sm font-medium text-slate-800 mb-1">
+        <div className="rounded-xl border border-[var(--border-color)] bg-slate-50 p-3">
+          <p className="text-sm font-medium text-[var(--text-primary)] mb-1">
             When to get urgent help
           </p>
           <p className="text-base leading-relaxed text-slate-700">

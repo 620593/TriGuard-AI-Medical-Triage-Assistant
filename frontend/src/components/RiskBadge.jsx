@@ -13,7 +13,7 @@ const RiskBadge = ({ level = "LOW" }) => {
       label: "🟡 Moderate",
     },
     HIGH: {
-      color: "bg-orange-50 text-orange-700 border border-orange-100",
+      color: "bg-[var(--bg-primary)] text-[var(--accent-active)] border border-orange-100",
       icon: <Info size={14} />,
       label: "🟠 High",
     },

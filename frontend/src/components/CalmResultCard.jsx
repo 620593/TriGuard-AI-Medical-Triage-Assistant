@@ -11,7 +11,7 @@ export const CALM_RISK = {
   },
   high: {
     label: "🟠 High",
-    tone: "bg-orange-50 text-orange-700",
+    tone: "bg-[var(--bg-primary)] text-[var(--accent-active)]",
   },
   critical: {
     label: "🔴 Critical",
@@ -43,12 +43,12 @@ export default function CalmResultCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className={`w-full rounded-2xl bg-white text-slate-800 shadow-sm border border-sky-100 p-5 ${className}`}
+      className={`w-full rounded-2xl bg-[var(--bg-secondary)] text-[var(--text-primary)]  border border-sky-100 p-5 ${className}`}
     >
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-          <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
+          <h3 className="text-lg font-semibold text-[var(--accent-primary)]">{title}</h3>
+          <p className="text-xs text-[var(--text-secondary)] mt-1">{subtitle}</p>
         </div>
 
         <span
@@ -60,7 +60,7 @@ export default function CalmResultCard({
 
       <div className="space-y-3">{children}</div>
 
-      <p className="mt-4 text-xs text-slate-500">{disclaimer}</p>
+      <p className="mt-4 text-xs text-[var(--text-secondary)]">{disclaimer}</p>
     </motion.div>
   );
 }

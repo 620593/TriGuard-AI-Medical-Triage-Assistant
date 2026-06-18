@@ -490,10 +490,10 @@ const TriageChat = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-4 px-2">
           <div>
-            <h1 className="text-xl font-bold text-white drop-shadow-md italic">
+            <h1 className="text-xl font-bold text-[var(--accent-primary)] italic">
               Medical Triage Session
             </h1>
-            <p className="text-xs text-slate-300 font-light">
+            <p className="text-xs text-[var(--text-secondary)] font-light">
               Encrypted &amp; Anonymous AI Consultation
             </p>
           </div>
@@ -505,10 +505,10 @@ const TriageChat = () => {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--panel-border)]"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] font-semibold text-emerald-300 tracking-wide">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--bg-primary)]0 animate-pulse" />
+                  <span className="text-[10px] font-semibold text-[var(--accent-active)] tracking-wide">
                     Session ···{sessionID.slice(-8)}
                   </span>
                 </motion.div>
@@ -532,7 +532,7 @@ const TriageChat = () => {
                   },
                 ]);
               }}
-              className="skeuo-btn px-3 py-1 !rounded-full text-xs flex items-center gap-1 hover:bg-teal-500/10 transition-colors"
+              className="skeuo-btn px-3 py-1 !rounded-full text-xs flex items-center gap-1 hover:bg-[var(--bg-primary)] transition-colors"
               title="Start a new chat session"
             >
               <RefreshCw size={11} />
@@ -548,7 +548,7 @@ const TriageChat = () => {
         {/* Chat Area — drop zone */}
         <div
           className={`flex-1 skeuo-panel overflow-y-auto mb-4 space-y-6 scrollbar-hide p-6 transition-all duration-200 relative ${
-            isDragOver ? "ring-2 ring-teal-400/70 bg-teal-400/5 ring-inset" : ""
+            isDragOver ? "ring-2 ring-[var(--accent-primary)] bg-[var(--bg-primary)] ring-inset" : ""
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -557,12 +557,12 @@ const TriageChat = () => {
           {/* Drag overlay hint */}
           {isDragOver && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
-              <div className="p-6 rounded-3xl bg-black/60 backdrop-blur-md border border-teal-400/40 flex flex-col items-center gap-3">
-                <ScanSearch size={40} className="text-teal-400 animate-pulse" />
-                <p className="text-teal-300 font-semibold text-lg">
+              <div className="p-6 rounded-3xl bg-[var(--bg-secondary)]/90 backdrop-blur-sm border border-[var(--panel-border)] flex flex-col items-center gap-3">
+                <ScanSearch size={40} className="text-[var(--accent-primary)] animate-pulse" />
+                <p className="text-[var(--accent-active)] font-semibold text-lg">
                   Drop image or PDF here
                 </p>
-                <p className="text-slate-400 text-xs">
+                <p className="text-[var(--text-secondary)] text-xs">
                   JPEG · PNG · WebP · GIF · BMP · TIFF · PDF
                 </p>
               </div>
@@ -586,11 +586,11 @@ const TriageChat = () => {
                     className={`p-2 skeuo-panel !rounded-full shrink-0 flex items-center justify-center w-10 h-10`}
                   >
                     {msg.role === "user" ? (
-                      <User size={18} className="text-white" />
+                      <User size={18} className="text-[var(--text-secondary)]" />
                     ) : (
                       <Bot
                         size={18}
-                        className="text-teal-400 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]"
+                        className="text-[var(--accent-primary)]"
                       />
                     )}
                   </div>
@@ -598,8 +598,8 @@ const TriageChat = () => {
                   <div
                     className={`relative px-5 py-3 ${
                       msg.role === "user"
-                        ? "skeuo-btn-primary rounded-2xl rounded-tr-none !cursor-default !active:translate-y-0"
-                        : "skeuo-panel rounded-2xl rounded-tl-none font-medium text-slate-100"
+                        ? "skeuo-btn-primary rounded-2xl rounded-tr-none !cursor-default !active:translate-y-0 text-white"
+                        : "skeuo-panel rounded-2xl rounded-tl-none font-medium text-[var(--text-primary)]"
                     }`}
                   >
                     {/* Risk badge — show for all assistant messages with a risk level */}
@@ -644,7 +644,7 @@ const TriageChat = () => {
                       <img
                         src={msg.imageUrl}
                         alt="Analysis"
-                        className="mt-3 rounded-lg border border-slate-200"
+                        className="mt-3 rounded-lg border border-[var(--border-color)]"
                       />
                     )}
 
@@ -666,16 +666,16 @@ const TriageChat = () => {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex justify-start items-center space-x-2 text-teal-400"
+              className="flex justify-start items-center space-x-2 text-[var(--accent-primary)]"
             >
               <Bot
                 size={18}
-                className="animate-bounce drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]"
+                className="animate-bounce text-[var(--accent-primary)]"
               />
               <div className="flex space-x-1">
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:-0.3s] shadow-[0_0_5px_rgba(45,212,191,0.8)]"></span>
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:-0.15s] shadow-[0_0_5px_rgba(45,212,191,0.8)]"></span>
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce shadow-[0_0_5px_rgba(45,212,191,0.8)]"></span>
+                <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce"></span>
               </div>
             </motion.div>
           )}
@@ -684,7 +684,7 @@ const TriageChat = () => {
 
         {/* Input Area */}
         <div className="relative">
-          <div className="skeuo-panel p-3 !rounded-3xl flex items-end gap-3 shadow-[0_4px_10px_rgba(0,0,0,0.1)]">
+          <div className="skeuo-panel p-3 !rounded-3xl flex items-end gap-3 0_4px_10px_rgba(0,0,0,0.1)]">
             <div
               className={`${isLoading ? "opacity-50 pointer-events-none" : ""}`}
             >
@@ -698,7 +698,7 @@ const TriageChat = () => {
               >
                 {/* 1. Medical Document / Prescription → OCR */}
                 <label
-                  className="cursor-pointer p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-teal-400 relative group"
+                  className="cursor-pointer p-2 hover:bg-[var(--bg-primary)] rounded-full transition-colors text-[var(--text-secondary)] hover:text-[var(--accent-active)] relative group"
                   title="Upload Medical Document / Prescription (OCR)"
                 >
                   <input
@@ -709,14 +709,14 @@ const TriageChat = () => {
                     accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/tiff,application/pdf"
                   />
                   <FileText size={20} />
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] bg-black/80 text-white rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     Medical Report / Prescription
                   </span>
                 </label>
 
                 {/* 2. Body / Skin Image → Vision pipeline */}
                 <label
-                  className="cursor-pointer p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-teal-400 relative group"
+                  className="cursor-pointer p-2 hover:bg-[var(--bg-primary)] rounded-full transition-colors text-[var(--text-secondary)] hover:text-[var(--accent-active)] relative group"
                   title="Upload Body or Skin Image (Visual Analysis)"
                 >
                   <input
@@ -727,14 +727,14 @@ const TriageChat = () => {
                     accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/tiff"
                   />
                   <Camera size={20} />
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] bg-black/80 text-white rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     Body / Skin Image
                   </span>
                 </label>
 
                 {/* 3. X-Ray → Xray analysis pipeline */}
                 <label
-                  className="cursor-pointer p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-emerald-400 relative group"
+                  className="cursor-pointer p-2 hover:bg-[var(--bg-primary)] rounded-full transition-colors text-[var(--text-secondary)] hover:text-[var(--accent-active)] relative group"
                   title="Upload X-Ray for AI Radiological Analysis"
                 >
                   <input
@@ -745,7 +745,7 @@ const TriageChat = () => {
                     accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/tiff"
                   />
                   <Stethoscope size={20} />
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] bg-black/80 text-white rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 text-[10px] bg-slate-800 text-white rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     X-Ray Analysis
                   </span>
                 </label>
@@ -778,7 +778,7 @@ const TriageChat = () => {
                   onChange={(e) => setConsentForCall(e.target.checked)}
                   className="w-3.5 h-3.5 accent-red-500 cursor-pointer"
                 />
-                <span className="text-[10px] text-slate-400 group-hover:text-slate-300 transition-colors">
+                <span className="text-[10px] text-[var(--text-secondary)] group-hover:text-gray-700 transition-colors">
                   🚨 Consent to emergency call if risk is critical
                 </span>
               </label>
@@ -832,24 +832,24 @@ const ImageTypeModal = ({ file, onSelect, onCancel }) => {
   const options = [
     {
       type: "document",
-      icon: <FileScan size={28} className="text-teal-400" />,
+      icon: <FileScan size={28} className="text-[var(--accent-primary)]" />,
       label: "Medical Document",
       sublabel: "Prescription, lab report, doctor's notes",
-      glow: "teal",
+      glow: "orange",
     },
     {
       type: "image",
-      icon: <Image size={28} className="text-blue-400" />,
+      icon: <Image size={28} className="text-amber-400" />,
       label: "Body / Skin Image",
       sublabel: "Wound, rash, skin condition",
-      glow: "blue",
+      glow: "amber",
     },
     {
       type: "xray",
-      icon: <Stethoscope size={28} className="text-emerald-400" />,
+      icon: <Stethoscope size={28} className="text-rose-400" />,
       label: "X-Ray / Scan",
       sublabel: "Radiological image for AI analysis",
-      glow: "emerald",
+      glow: "rose",
     },
   ];
 
@@ -857,7 +857,7 @@ const ImageTypeModal = ({ file, onSelect, onCancel }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         onClick={onCancel}
       />
       {/* Modal card */}
@@ -869,17 +869,17 @@ const ImageTypeModal = ({ file, onSelect, onCancel }) => {
       >
         <button
           onClick={onCancel}
-          className="absolute top-4 right-4 p-1 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 p-1 hover:bg-[var(--bg-primary)] rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
         >
           <X size={18} />
         </button>
 
         <div className="mb-6 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mx-auto mb-3">
-            <ScanSearch size={24} className="text-teal-400" />
+          <div className="w-12 h-12 rounded-2xl bg-[var(--bg-primary)] border border-[var(--panel-border)] flex items-center justify-center mx-auto mb-3">
+            <ScanSearch size={24} className="text-[var(--accent-primary)]" />
           </div>
-          <h3 className="text-lg font-bold text-white">Select Image Type</h3>
-          <p className="text-xs text-slate-400 mt-1 truncate max-w-[220px] mx-auto">
+          <h3 className="text-lg font-bold text-[var(--accent-primary)]">Select Image Type</h3>
+          <p className="text-xs text-[var(--text-secondary)] mt-1 truncate max-w-[220px] mx-auto">
             {file.name || "pasted image"}
           </p>
         </div>
@@ -889,18 +889,18 @@ const ImageTypeModal = ({ file, onSelect, onCancel }) => {
             <button
               key={type}
               onClick={() => onSelect(type)}
-              className={`flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-${glow}-400/40 hover:bg-${glow}-500/10 transition-all text-left group`}
+              className={`flex items-center gap-4 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--panel-border)] hover:border-${glow}-300 hover:bg-${glow}-50 transition-all text-left  hover: group`}
             >
               <div
-                className={`p-2 rounded-xl bg-${glow}-500/10 border border-${glow}-500/20 shrink-0`}
+                className={`p-2 rounded-xl bg-${glow}-50 border border-${glow}-200 shrink-0`}
               >
                 {icon}
               </div>
               <div>
-                <p className="font-semibold text-white text-sm group-hover:text-${glow}-300 transition-colors">
+                <p className={`font-semibold text-[var(--text-primary)] text-sm group-hover:text-${glow}-700 transition-colors`}>
                   {label}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">{sublabel}</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">{sublabel}</p>
               </div>
             </button>
           ))}

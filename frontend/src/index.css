@@ -1,25 +1,86 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
-@theme {
-  --color-medical-primary: #0d9488;
-  --color-medical-secondary: #0ea5e9;
-  --color-medical-bg: #030712;
-  --color-risk-low: #22c55e;
-  --color-risk-medium: #eab308;
-  --color-risk-high: #ef4444;
+@layer base {
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #e2e8f0;
+    --panel-border: #cbd5e1;
+
+    /* Base Orange Accent */
+    --accent-primary: #f97316;
+    --accent-hover: #ea580c;
+    --accent-active: #c2410c;
+    --accent-light: #ffedd5;
+    --accent-light-border: #fed7aa;
+    
+    --color-medical-bg: var(--bg-primary);
+    
+    /* Risk Levels */
+    --color-risk-low: #22c55e;
+    --color-risk-medium: #eab308;
+    --color-risk-high: #ef4444;
+  }
+
+  [data-theme="dark"] {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --border-color: #334155;
+    --panel-border: #475569;
+    
+    /* Keep accent bright for contrast */
+    --accent-light: #2d1a0e;
+    --accent-light-border: #522d15;
+  }
+  
+  [data-accent="blue"] {
+    --accent-primary: #3b82f6;
+    --accent-hover: #2563eb;
+    --accent-active: #1d4ed8;
+    --accent-light: #dbeafe;
+    --accent-light-border: #bfdbfe;
+  }
+  [data-theme="dark"][data-accent="blue"] {
+    --accent-light: #162438;
+    --accent-light-border: #1e3a8a;
+  }
+
+  [data-accent="green"] {
+    --accent-primary: #10b981;
+    --accent-hover: #059669;
+    --accent-active: #047857;
+    --accent-light: #d1fae5;
+    --accent-light-border: #a7f3d0;
+  }
+  [data-theme="dark"][data-accent="green"] {
+    --accent-light: #0d261e;
+    --accent-light-border: #064e3b;
+  }
 }
 
-:root {
-  font-family:
-    "Outfit",
-    system-ui,
-    -apple-system,
-    sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: dark;
-  background-color: var(--color-medical-bg);
+@theme {
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-border: var(--border-color);
+  --color-panel-border: var(--panel-border);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-light: var(--accent-light);
+  --color-accent-light-border: var(--accent-light-border);
+  
+  --color-medical-bg: var(--bg-primary);
+  --color-medical-primary: var(--accent-primary);
+  --color-risk-low: var(--color-risk-low);
+  --color-risk-medium: var(--color-risk-medium);
+  --color-risk-high: var(--color-risk-high);
 }
 
 body {
@@ -28,72 +89,65 @@ body {
   place-content: center;
   min-width: 320px;
   min-height: 100vh;
-  @apply bg-[#030712] text-slate-50 transition-colors duration-300;
-  background-image:
-    repeating-linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.015) 0px,
-      rgba(255, 255, 255, 0.015) 2px,
-      transparent 2px,
-      transparent 4px
-    ),
-    radial-gradient(circle at top, #0f172a 0%, #030712 100%);
-  background-attachment: fixed;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Glassmorphism Classes for Premium Dark Theme */
+[data-theme="dark"] body {
+  background-color: var(--bg-primary);
+}
+
+/* Premium Modular Classes */
 @utility skeuo-panel {
-  @apply bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.05)];
+  @apply bg-[var(--bg-secondary)] border border-[var(--panel-border)] rounded-lg text-[var(--text-primary)] transition-all duration-200;
 }
 
 @utility skeuo-btn {
-  @apply bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_4px_16px_rgba(255,255,255,0.1)] active:scale-95 active:bg-white/5 transition-all font-medium text-white cursor-pointer;
+  @apply bg-[var(--bg-secondary)] hover:bg-[var(--accent-light)] active:bg-[var(--accent-light)] border border-[var(--panel-border)] hover:border-[var(--accent-primary)] rounded-lg transition-all font-medium text-[var(--text-primary)] cursor-pointer;
 }
 
 @utility skeuo-btn-primary {
-  @apply bg-gradient-to-r from-teal-500 to-emerald-600 border border-teal-400/30 rounded-xl shadow-[0_4px_15px_rgba(20,184,166,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] hover:shadow-[0_4px_25px_rgba(20,184,166,0.4)] hover:brightness-110 active:scale-95 text-white font-bold transition-all cursor-pointer;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  @apply bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] border border-[var(--accent-hover)] rounded-lg text-[var(--bg-primary)] font-medium transition-all duration-200 cursor-pointer;
 }
 
 @utility skeuo-input {
-  @apply bg-black/60 backdrop-blur-lg border border-white/10 rounded-xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] px-4 py-3 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition-all text-white placeholder-white/30;
-}
-
-.text-shadow {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  @apply bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg px-4 py-3 outline-none focus:border-[var(--accent-primary)] focus:ring-1 focus:ring-[var(--accent-primary)] transition-all text-[var(--text-primary)] placeholder-[var(--text-secondary)];
 }
 
 /* Animations */
 @keyframes pulse-wave {
-  0% {
-    transform: scaleY(0.5);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scaleY(1.5);
-    opacity: 1;
-    box-shadow: 0 0 15px rgba(20, 184, 166, 0.8);
-  }
-  100% {
-    transform: scaleY(0.5);
-    opacity: 0.5;
-  }
+  0% { transform: scaleY(0.5); opacity: 0.5; }
+  50% { transform: scaleY(1.5); opacity: 1; box-shadow: 0 0 10px var(--accent-primary); }
+  100% { transform: scaleY(0.5); opacity: 0.5; }
 }
 
 .wave-bar {
   display: inline-block;
   width: 4px;
   height: 24px;
-  background: linear-gradient(to top, var(--color-medical-primary), #2dd4bf);
+  background: linear-gradient(to top, var(--accent-primary), var(--accent-light-border));
   margin: 0 2px;
   border-radius: 2px;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   animation: pulse-wave 1.2s infinite ease-in-out;
 }
 
-/* Scrollbar Hide */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

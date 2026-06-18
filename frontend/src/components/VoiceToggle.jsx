@@ -9,7 +9,7 @@ const VoiceToggle = ({ isActive, onClick }) => {
         onClick={onClick}
         className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
           isActive
-            ? "bg-gradient-to-b from-red-500 to-red-600 shadow-[0_5px_10px_rgba(239,68,68,0.4),inset_0_2px_1px_rgba(255,255,255,0.5)] text-white ring-4 ring-red-100 dark:ring-red-900/20 active:translate-y-1 active:shadow-[inset_0_4px_6px_rgba(0,0,0,0.3)] cursor-pointer"
+            ? "   0_5px_10px_rgba(239,68,68,0.4),inset_0_2px_1px_rgba(255,255,255,0.5)] text-white ring-4 ring-red-100 dark:ring-red-900/20 active:translate-y-1 active:inset_0_4px_6px_rgba(0,0,0,0.3)] cursor-pointer"
             : "skeuo-btn-primary !rounded-full"
         }`}
       >
@@ -57,7 +57,7 @@ const VoiceToggle = ({ isActive, onClick }) => {
           ))}
         </div>
       )}
-      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+      <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-secondary)]">
         {isActive ? "Listening..." : "Push to Talk"}
       </span>
     </div>

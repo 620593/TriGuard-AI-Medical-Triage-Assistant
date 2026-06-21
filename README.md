@@ -5,7 +5,7 @@
 **Multimodal Medical Triage Assistant (V6.0)**
 
 [![Version](https://img.shields.io/badge/version-6.0-blue.svg?style=for-the-badge)](https://github.com/620593/TriGuard-AI-Medical-Triage-Assistant)
-[![Python](https://img.shields.io/badge/python-3.11-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/python-3.12-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://reactjs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
@@ -96,7 +96,7 @@ TriGuard-AI/
 | **Reasoning/NLP** | Groq LLaMA 3.1 70B (Brain), LLaMA 3 8B (Classification)      |
 | **Vision/OCR**    | Groq Vision-LLaVA, Tesseract/OCR-Engine                      |
 | **Orchestration** | LangGraph (Stateful Multi-actor Graph)                       |
-| **Backend**       | Python 3.11, FastAPI, Pydantic V2, Motor, bcrypt             |
+| **Backend**       | Python 3.12, FastAPI, Pydantic V2, Motor, bcrypt             |
 | **Frontend**      | React 19, Framer Motion (premium animations), Tailwind CSS 4 |
 | **Search/RAG**    | Tavily AI (Medical web search)                               |
 

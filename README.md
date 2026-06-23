@@ -25,11 +25,11 @@ Version 6.0 introduces a massive structural leap, finalizing the architecture wi
 
 | Feature                             | Description                                                                                                                                                                                           | Impact                                   |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| �️ **Authentication 2.0**            | Secure login system featuring **Google OAuth** integration, JWT-based protected routes, and Axios 401 interceptors.                                                                                   | Seamless & secure onboarding.            |
+| 🔒 **Authentication 2.0**            | Secure login system featuring **Google OAuth** integration, JWT-based protected routes, and Axios 401 interceptors.                                                                                   | Seamless & secure onboarding.            |
 | 🧠 **In-Session Memory**            | True conversational flow! The AI remembers previous turns inside the same session so you don't have to repeat your symptoms repeatedly. Uses MongoDB session ID mapping.                              | Fluid conversational triage.             |
 | 💊 **OTC & Nutrition Integrations** | Now safely suggests over-the-counter medications and dietary nutrition tips when triggered by the triage logic and verified safely.                                                                   | Actionable holistic advice.              |
 | 🎨 **UI Redesign**                  | Breathtaking Frontend redesign utilizing React 19, Tailwind CSS 4, and Framer Motion micro-interactions. Offers split-screen glassmorphic layouts.                                                    | Premium visual experience.               |
-| � **Deep Document Pipeline**        | A robust `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into our clinical text engine. | High precision medical record ingestion. |
+| 📄 **Deep Document Pipeline**        | A robust `DOCUMENT → OCR → TEXT` flow. Uploading medical reports, prescriptions, or lab results automatically triggers high-precision OCR and feeds extracted symptoms into our clinical text engine. | High precision medical record ingestion. |
 | 🌍 **Native Multilingual**          | Triage instructions are embedded directly in the LLM prompt, simplifying complex jargon locally for diverse users.                                                                                    | Inclusive, fast responses globally.      |
 
 ---
@@ -142,6 +142,22 @@ TRIGUARD_ENV="development"
 TWILIO_ACCOUNT_SID="your_twilio_account_sid_here"
 TWILIO_AUTH_TOKEN="your_twilio_auth_token_here"
 TWILIO_FROM_NUMBER="your_twilio_from_number_here"
+```
+
+**5. Run the Application**
+
+In two separate terminals, run the backend and frontend servers:
+
+**Backend:**
+```bash
+cd backend
+uv run uvicorn src.main:app --reload --port 8000
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm run dev
 ```
 
 ---

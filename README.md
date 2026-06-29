@@ -144,6 +144,20 @@ TWILIO_AUTH_TOKEN="your_twilio_auth_token_here"
 TWILIO_FROM_NUMBER="your_twilio_from_number_here"
 ```
 
+**5. Start Local Servers**
+
+For backend:
+```bash
+cd backend
+uv run uvicorn src.main:app --reload --port 8000
+```
+
+For frontend:
+```bash
+cd frontend
+npm run dev
+```
+
 ---
 
 ## ⚖️ Legal Disclaimer

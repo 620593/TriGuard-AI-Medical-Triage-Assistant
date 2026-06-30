@@ -144,6 +144,32 @@ TWILIO_AUTH_TOKEN="your_twilio_auth_token_here"
 TWILIO_FROM_NUMBER="your_twilio_from_number_here"
 ```
 
+**5. Start the Servers**
+
+*Backend:*
+```bash
+cd backend
+uv run uvicorn src.main:app --reload --port 8000
+```
+
+*Frontend:*
+```bash
+cd frontend
+npm run dev
+```
+
+## 🧪 Testing
+
+To run the backend test suite, use the following commands to ensure proper module and dependency resolution:
+
+```bash
+cd backend
+uv venv --clear
+source .venv/bin/activate
+uv pip install -e .
+PYTHONPATH=$(pwd)/.. JWT_SECRET_KEY="test_secret" MONGODB_URI="mongodb://localhost:27017" GROQ_API_KEY="test" GOOGLE_CLIENT_ID="test" GOOGLE_CLIENT_SECRET="test" GEMINI_API_KEY="test" pytest tests/
+```
+
 ---
 
 ## ⚖️ Legal Disclaimer

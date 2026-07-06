@@ -1,5 +1,5 @@
 [project]
-name = "trigaurd-ai-voice-enabled-intelligent-health-risk-assistant"
+name = "triguard-ai-voice-enabled-intelligent-health-risk-assistant"
 version = "3.0.0"
 description = "Production-ready medical triage system with FastAPI, MongoDB, voice, OCR, X-ray support (v3)"
 readme = "README.md"
